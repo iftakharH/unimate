@@ -1,5 +1,7 @@
 # 🎓 Unimate - Student Marketplace
 
+**A project of Purple Tech.**
+
 A modern, minimal student marketplace for buying and selling items on campus. Built with React, Vite, and Supabase.
 
 ---
