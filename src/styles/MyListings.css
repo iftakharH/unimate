@@ -1,0 +1,134 @@
+.mylists-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.mylists-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.mylists-header h1 {
+    color: #2d3436;
+    font-size: 2rem;
+}
+
+.btn-create {
+    background: #6c5ce7;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-create:hover {
+    background: #5b4cc4;
+}
+
+/* Reuse grid from Marketplace but ensure it fits */
+.listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.listing-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s;
+    border: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+}
+
+.listing-card:hover {
+    transform: translateY(-5px);
+}
+
+.card-image {
+    height: 200px;
+    width: 100%;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-content h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2d3436;
+    font-size: 1.2rem;
+}
+
+.price {
+    font-size: 1.25rem;
+    color: #00b894;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.card-actions {
+    margin-top: auto;
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-edit,
+.btn-delete {
+    flex: 1;
+    padding: 0.6rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.btn-edit {
+    background: #dfe6e9;
+    color: #2d3436;
+}
+
+.btn-delete {
+    background: #fab1a0;
+    color: #d63031;
+}
+
+.btn-edit:hover,
+.btn-delete:hover {
+    opacity: 0.8;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem;
+    background: white;
+    border-radius: 12px;
+    border: 1px dashed #ced6e0;
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: #636e72;
+    font-size: 1.2rem;
+}
