@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { chatService } from "../services/chatService";
 import { listingService } from "../services/listingService";
 import { reviewService } from "../services/reviewService";
+import Modal from "../components/Modal";
 import "../styles/ProductPage.css";
 
 const PLACEHOLDER_IMG =
@@ -36,14 +37,18 @@ const ProductPage = () => {
     const [myText, setMyText] = useState("");
     const [submittingReview, setSubmittingReview] = useState(false);
 
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
+
     const isOwnListing = useMemo(() => {
         if (!user || !listing) return false;
         return user.id === listing.seller_id;
     }, [user, listing]);
 
-    // ✅ normalize images list from listing_images
-    const imagesList = useMemo(() => {
+    // ✅ normalize media (images + videos)
+    const mediaList = useMemo(() => {
         const imgs = Array.isArray(listing?.listing_images) ? [...listing.listing_images] : [];
+        const vids = Array.isArray(listing?.listing_videos) ? [...listing.listing_videos] : []; // Assuming listing_videos is populated
 
         // primary first, then sort_order
         imgs.sort((a, b) => {
@@ -53,23 +58,28 @@ const ProductPage = () => {
             return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
         });
 
+        const allMedia = [
+            ...imgs.map(i => ({ type: 'image', url: i.image_url, ...i })),
+            ...vids.map(v => ({ type: 'video', url: v.video_url, ...v }))
+        ];
+
         // fallback legacy single image_url
-        if (imgs.length === 0 && listing?.image_url) {
-            return [{ image_url: listing.image_url, is_primary: true, sort_order: 0 }];
+        if (allMedia.length === 0 && listing?.image_url) {
+            return [{ type: 'image', url: listing.image_url, is_primary: true, sort_order: 0 }];
         }
 
         // final fallback
-        if (imgs.length === 0) {
-            return [{ image_url: PLACEHOLDER_IMG, is_primary: true, sort_order: 0 }];
+        if (allMedia.length === 0) {
+            return [{ type: 'image', url: PLACEHOLDER_IMG, is_primary: true, sort_order: 0 }];
         }
 
-        return imgs;
+        return allMedia;
     }, [listing]);
 
-    const activeImageUrl = useMemo(() => {
-        const idx = Math.min(Math.max(activeImgIdx, 0), imagesList.length - 1);
-        return imagesList[idx]?.image_url || PLACEHOLDER_IMG;
-    }, [imagesList, activeImgIdx]);
+    const activeMedia = useMemo(() => {
+        const idx = Math.min(Math.max(activeImgIdx, 0), mediaList.length - 1);
+        return mediaList[idx];
+    }, [mediaList, activeImgIdx]);
 
     // ✅ when listing changes, reset active image
     useEffect(() => {
@@ -142,7 +152,15 @@ const ProductPage = () => {
         if (!listing) return;
 
         if (user.id === listing.seller_id) {
-            alert("You cannot chat with yourself!");
+            setModal({
+                isOpen: true,
+                title: "Information",
+                message: "You cannot chat with yourself!",
+                type: "info",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
             return;
         }
 
@@ -151,7 +169,15 @@ const ProductPage = () => {
             navigate(`/chat/${chatId}`);
         } catch (err) {
             console.error(err);
-            alert("Could not start chat. Please try again.");
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Could not start chat. Please try again later.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         }
     };
 
@@ -160,7 +186,15 @@ const ProductPage = () => {
         if (!listing) return;
 
         if (user.id === listing.seller_id) {
-            alert("You cannot review your own product.");
+            setModal({
+                isOpen: true,
+                title: "Notice",
+                message: "You cannot review your own product.",
+                type: "info",
+                confirmText: "Understood",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
             return;
         }
 
@@ -231,48 +265,59 @@ const ProductPage = () => {
         <div className="pp-wrap">
             <div className="pp-container">
                 <div className="pp-hero">
-                    <div className={`pp-hero__media ${imagesList.length <= 1 ? "pp-hero__media--single" : ""}`}>
-                        {/* ✅ thumbs column - only show if > 1 image */}
-                        {imagesList.length > 1 && (
+                    <div className={`pp-hero__media ${mediaList.length <= 1 ? "pp-hero__media--single" : ""}`}>
+                        {/* ✅ thumbs column - only show if > 1 items */}
+                        {mediaList.length > 1 && (
                             <div className="pp-thumb">
                                 <div className="pp-thumbs">
-                                    {imagesList.map((img, idx) => (
+                                    {mediaList.map((item, idx) => (
                                         <button
-                                            key={`${img.image_url}-${idx}`}
+                                            key={`${item.url}-${idx}`}
                                             type="button"
                                             className={`pp-thumbBtn ${idx === activeImgIdx ? "is-active" : ""}`}
                                             onClick={() => setActiveImgIdx(idx)}
-                                            aria-label={`Show image ${idx + 1}`}
-                                            title={`Image ${idx + 1}`}
+                                            aria-label={`Show item ${idx + 1}`}
                                         >
-                                            <img src={img.image_url || PLACEHOLDER_IMG} alt={`${listing.title} thumb ${idx + 1}`} />
+                                            {item.type === 'video' ? (
+                                                <div className="pp-thumb-vid-icon">▶</div>
+                                            ) : (
+                                                <img src={item.url || PLACEHOLDER_IMG} alt={`${listing.title} thumb ${idx + 1}`} />
+                                            )}
                                         </button>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* ✅ main image */}
+                        {/* ✅ main media */}
                         <div className="pp-mainimg">
-                            <img src={activeImageUrl} alt={listing.title} />
-                            <button
-                                type="button"
-                                className="pp-imgNav pp-imgNav--prev"
-                                onClick={() => setActiveImgIdx((i) => Math.max(0, i - 1))}
-                                disabled={activeImgIdx === 0}
-                            >
-                                ‹
-                            </button>
+                            {activeMedia?.type === 'video' ? (
+                                <video src={activeMedia.url} controls className="pp-main-video" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            ) : (
+                                <img src={activeMedia?.url || PLACEHOLDER_IMG} alt={listing.title} />
+                            )}
 
-                            <button
-                                type="button"
-                                className="pp-imgNav pp-imgNav--next"
-                                onClick={() => setActiveImgIdx((i) => Math.min(imagesList.length - 1, i + 1))}
-                                disabled={activeImgIdx === imagesList.length - 1}
-                            >
-                                ›
-                            </button>
+                            {mediaList.length > 1 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="pp-imgNav pp-imgNav--prev"
+                                        onClick={() => setActiveImgIdx((i) => Math.max(0, i - 1))}
+                                        disabled={activeImgIdx === 0}
+                                    >
+                                        ‹
+                                    </button>
 
+                                    <button
+                                        type="button"
+                                        className="pp-imgNav pp-imgNav--next"
+                                        onClick={() => setActiveImgIdx((i) => Math.min(mediaList.length - 1, i + 1))}
+                                        disabled={activeImgIdx === mediaList.length - 1}
+                                    >
+                                        ›
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -295,7 +340,7 @@ const ProductPage = () => {
                             </span>
                         </div>
 
-                        <div className="pp-price">${listing.price}</div>
+                        <div className="pp-price">{listing.price} BDT</div>
 
                         {/* ✅ no duplicate description */}
                         {shortDesc ? <p className="pp-shortdesc">{shortDesc}</p> : null}
@@ -320,16 +365,18 @@ const ProductPage = () => {
                                 </div>
                             ) : null}
 
-                            {listing?.currency ? (
+                            {listing?.stock_count !== undefined ? (
                                 <div className="pp-meta-row">
-                                    <span className="pp-meta-k">Currency:</span>
-                                    <span className="pp-meta-v">{listing.currency}</span>
+                                    <span className="pp-meta-k">Availability:</span>
+                                    <span className="pp-meta-v">
+                                        {listing.stock_count > 0 ? `${listing.stock_count} units currently available` : "Out of Stock"}
+                                    </span>
                                 </div>
                             ) : null}
 
                             {listing?.location ? (
                                 <div className="pp-meta-row">
-                                    <span className="pp-meta-k">Pickup:</span>
+                                    <span className="pp-meta-k">Product Location:</span>
                                     <span className="pp-meta-v">{listing.location}</span>
                                 </div>
                             ) : null}
@@ -507,7 +554,7 @@ const ProductPage = () => {
                                                 {p.title}
                                             </button>
 
-                                            <div className="pp-rp__price">${p.price}</div>
+                                            <div className="pp-rp__price">{p.price} BDT</div>
 
                                             <button
                                                 type="button"
@@ -524,6 +571,16 @@ const ProductPage = () => {
                     )}
                 </div>
             </div>
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };

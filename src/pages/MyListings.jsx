@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import Modal from "../components/Modal";
 import "../styles/MyListings.css";
+import ListingCountdown from "../components/ListingCountdown";
 
 const MyListings = () => {
     const { user } = useAuth();
@@ -11,6 +13,9 @@ const MyListings = () => {
     const [listings, setListings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busyId, setBusyId] = useState(null); // for delete button loading
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
 
     useEffect(() => {
         if (user) fetchMyListings();
@@ -54,7 +59,7 @@ const MyListings = () => {
         () =>
             new Intl.NumberFormat(undefined, {
                 style: "currency",
-                currency: "USD",
+                currency: "BDT",
                 maximumFractionDigits: 0,
             }),
         []
@@ -72,15 +77,20 @@ const MyListings = () => {
         return primary?.image_url || item?.image_url || "";
     };
 
-    const handleDelete = async (id) => {
-        if (
-            !window.confirm(
-                "Are you sure you want to delete this listing? This action cannot be undone."
-            )
-        ) {
-            return;
-        }
+    const handleDelete = (id) => {
+        setModal({
+            isOpen: true,
+            title: "Confirm Deletion",
+            message: "Are you sure you want to delete this listing? This action cannot be undone and the listing will be permanently removed.",
+            type: "danger",
+            confirmText: "Delete Listing",
+            onConfirm: () => performDelete(id),
+            onClose: () => setModal({ ...modal, isOpen: false })
+        });
+    };
 
+    const performDelete = async (id) => {
+        setModal({ ...modal, isOpen: false });
         setBusyId(id);
         try {
             const { error } = await supabase.from("listings").delete().eq("id", id);
@@ -88,7 +98,15 @@ const MyListings = () => {
 
             setListings((prev) => prev.filter((item) => item.id !== id));
         } catch (error) {
-            alert("Error deleting listing: " + error.message);
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Error deleting listing: " + error.message,
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         } finally {
             setBusyId(null);
         }
@@ -180,6 +198,9 @@ const MyListings = () => {
                             </button>
 
                             <div className="mylists-cardBody">
+                                {/* Countdown Timer */}
+                                <ListingCountdown createdAt={item.created_at} />
+
                                 <div className="mylists-cardTop">
                                     <h3 className="mylists-cardTitle" title={item.title}>
                                         {item.title}
@@ -228,6 +249,16 @@ const MyListings = () => {
                     ))}
                 </div>
             )}
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };

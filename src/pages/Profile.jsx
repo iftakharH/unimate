@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../supabaseClient";
+import Modal from "../components/Modal";
 import "../styles/Profile.css";
 
 // ✅ Professional icons (Font Awesome - solid)
@@ -27,9 +28,10 @@ const Profile = () => {
     const [bioText, setBioText] = useState("");
 
     const [unreadMsgs, setUnreadMsgs] = useState(0);
-    const [listingCount, setListingCount] = useState(0);
-    const [purchaseCount, setPurchaseCount] = useState(0);
     const [salesCount, setSalesCount] = useState(0);
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
 
     const displayName = useMemo(() => {
         const meta = user?.user_metadata || {};
@@ -59,13 +61,23 @@ const Profile = () => {
         }
     }, [user]);
 
-    const handleLogout = async () => {
-        try {
-            await signOut();
-            navigate("/");
-        } catch (error) {
-            console.error("Error signing out:", error);
-        }
+    const handleLogout = () => {
+        setModal({
+            isOpen: true,
+            title: "Confirm Sign Out",
+            message: "Are you sure you want to sign out of your account?",
+            type: "info",
+            confirmText: "Sign Out",
+            onConfirm: async () => {
+                try {
+                    await signOut();
+                    navigate("/");
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                }
+            },
+            onClose: () => setModal({ ...modal, isOpen: false })
+        });
     };
 
     const handleAvatarClick = () => {
@@ -108,7 +120,15 @@ const Profile = () => {
             window.location.reload();
         } catch (error) {
             console.error("Error uploading avatar:", error);
-            alert("Failed to upload avatar: " + error.message);
+            setModal({
+                isOpen: true,
+                title: "Upload Error",
+                message: "Failed to upload avatar: " + error.message,
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         } finally {
             setUploadingAvatar(false);
         }
@@ -134,7 +154,15 @@ const Profile = () => {
             window.location.reload();
         } catch (error) {
             console.error("Error saving bio:", error);
-            alert("Failed to save bio");
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Failed to save bio. Please try again.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         } finally {
             setLoading(false);
         }
@@ -239,7 +267,7 @@ const Profile = () => {
                                         {unreadMsgs} new message{unreadMsgs === 1 ? "" : "s"}
                                     </span>
                                 ) : (
-                                    <span className="pro-pill">All caught up</span>
+                                    <span className="pro-pill">Unimate</span>
                                 )}
                             </div>
 
@@ -272,14 +300,14 @@ const Profile = () => {
                     </div>
 
                     <div className="pro-hero__right">
-                        <button
+                        {/* <button
                             className="pro-btn pro-btn--primary"
                             onClick={() => navigate("/messages")}
                         >
                             <FontAwesomeIcon icon={faEnvelope} />
                             Inbox
                             <span className="pro-btn-badge">{unreadMsgs}</span>
-                        </button>
+                        </button> */}
 
                         <button
                             className="pro-btn pro-btn--ghost"
@@ -292,7 +320,7 @@ const Profile = () => {
                 </section>
 
                 {/* Stats */}
-                <section className="pro-stats">
+                {/* <section className="pro-stats">
                     <button className="pro-stat" onClick={() => navigate("/messages")}>
                         <span className="pro-stat__label">Unread</span>
                         <span className="pro-stat__value">{loading ? "—" : unreadMsgs}</span>
@@ -316,7 +344,7 @@ const Profile = () => {
                         <span className="pro-stat__value">{loading ? "—" : salesCount}</span>
                         <span className="pro-stat__hint">Completed</span>
                     </button>
-                </section>
+                </section> */}
 
                 {/* Main Grid */}
                 <div className="pro-grid">
@@ -343,16 +371,16 @@ const Profile = () => {
                                 </div>
                                 <div className="pro-action__chev">›</div>
                             </button>
-
+                            {/* 
                             <button className="pro-action" onClick={() => navigate("/messages")}>
                                 <div className="pro-action__text">
                                     <div className="pro-action__title">Messages</div>
                                     <div className="pro-action__sub">
-                                        Unread: <strong>{loading ? "—" : unreadMsgs}</strong>
+                                        Unread: <strong>{loading ? "_" : unreadMsgs}</strong>
                                     </div>
                                 </div>
                                 <div className="pro-action__chev">›</div>
-                            </button>
+                            </button> */}
 
                             <button className="pro-action" onClick={() => navigate("/saved")}>
                                 <div className="pro-action__text">
@@ -421,6 +449,16 @@ const Profile = () => {
                     </button>
                 </section>
             </div>
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };

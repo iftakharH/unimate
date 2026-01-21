@@ -130,7 +130,7 @@ const Messages = () => {
 
                                     <div className="conv-meta">
                                         <span className="conv-price">
-                                            {conv.listing?.price != null ? `$${conv.listing.price}` : ""}
+                                            {conv.listing?.price != null ? `${conv.listing.price} BDT` : ""}
                                         </span>
                                         <span className="conv-time">
                                             {new Date(conv.lastMessage?.created_at || conv.created_at).toLocaleDateString()}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import Modal from "../components/Modal";
 import "../styles/SavedItems.css";
 
 const SavedItems = () => {
@@ -9,6 +10,9 @@ const SavedItems = () => {
     const navigate = useNavigate();
     const [savedListings, setSavedListings] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
 
     useEffect(() => {
         if (user) fetchSavedItems();
@@ -57,7 +61,15 @@ const SavedItems = () => {
             setSavedListings((prev) => prev.filter((item) => item.id !== savedId));
         } catch (err) {
             console.error("Error removing saved item:", err);
-            alert("Failed to remove item");
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Failed to remove item from saved list. Please try again.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         }
     };
 
@@ -115,7 +127,7 @@ const SavedItems = () => {
                                         {listing.title}
                                     </h3>
                                     <div className="saved-card-meta">
-                                        <span className="saved-card-price">${listing.price}</span>
+                                        <span className="saved-card-price">{listing.price} BDT</span>
                                         <span className="saved-card-condition">{listing.condition}</span>
                                     </div>
                                     <div className="saved-card-actions">
@@ -138,6 +150,16 @@ const SavedItems = () => {
                     })}
                 </div>
             )}
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };

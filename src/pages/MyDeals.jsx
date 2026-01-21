@@ -68,6 +68,9 @@ const MyDeals = () => {
                                         <span className={`status-badge ${deal.status}`}>
                                             {deal.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
                                         </span>
+                                        <span className="deal-price">
+                                            {deal.listing?.price != null ? `${deal.listing.price} BDT` : ""}
+                                        </span>
                                         <span className="deal-date">
                                             {new Date(deal.created_at).toLocaleDateString()}
                                         </span>

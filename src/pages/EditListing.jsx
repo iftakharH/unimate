@@ -9,7 +9,7 @@ const MAX_IMAGE_MB = 2;
 const MAX_VIDEOS = 2;
 const MAX_VIDEO_MB = 20;
 const ACCEPTED_IMAGE = ["image/jpeg", "image/png", "image/webp"];
-const ACCEPTED_VIDEO = ["video/mp4"];
+const ACCEPTED_VIDEO = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
 
 const EditListing = () => {
     const { user } = useAuth();
@@ -23,6 +23,7 @@ const EditListing = () => {
     const [errorMsg, setErrorMsg] = useState("");
 
     const [listing, setListing] = useState(null);
+    const [categories, setCategories] = useState([]);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -59,8 +60,12 @@ const EditListing = () => {
             custom_field_1: "",
             custom_field_2: "",
         },
+        stock_count: 1,
     });
 
+    const [touched, setTouched] = useState({});
+
+    const [showOptional, setShowOptional] = useState(false);
     const [images, setImages] = useState([]); // existing images rows
     const [newFiles, setNewFiles] = useState([]); // File[]
     const [newPreviews, setNewPreviews] = useState([]); // string[]
@@ -88,10 +93,14 @@ const EditListing = () => {
 
                 if (!user?.id) return;
 
+                const { data: catData } = await supabase.from("categories").select("*");
+                if (catData) setCategories(catData);
+
                 const { data, error } = await supabase
                     .from("listings")
                     .select(`
             *,
+            categories ( name ),
             listing_images ( id, image_url, is_primary, sort_order ),
             listing_videos ( id, video_url, sort_order )
           `)
@@ -119,6 +128,7 @@ const EditListing = () => {
                     condition: data.condition || "",
                     negotiable: !!data.negotiable,
                     location: data.location || "",
+                    stock_count: data.stock_count || 1,
                     attributes: {
                         brand: attrs.brand || "",
                         model: attrs.model || "",
@@ -165,10 +175,12 @@ const EditListing = () => {
 
     const updateField = (key, value) => {
         setFormData((p) => ({ ...p, [key]: value }));
+        setTouched((p) => ({ ...p, [key]: true }));
     };
 
     const updateAttr = (key, value) => {
         setFormData((p) => ({ ...p, attributes: { ...p.attributes, [key]: value } }));
+        setTouched((p) => ({ ...p, [`attr_${key}`]: true }));
     };
 
     const validateAndAddFiles = (fileList) => {
@@ -226,7 +238,7 @@ const EditListing = () => {
             if (videos.length + nextFiles.length >= MAX_VIDEOS) break;
 
             if (!ACCEPTED_VIDEO.includes(f.type)) {
-                setErrorMsg("Only MP4 videos are allowed.");
+                setErrorMsg("Only MP4, WEBM, OGG, MOV videos are allowed.");
                 continue;
             }
             const mb = f.size / (1024 * 1024);
@@ -386,6 +398,13 @@ const EditListing = () => {
         return data.publicUrl;
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter" && canSave) {
+            e.preventDefault();
+            handleSave(e);
+        }
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
         setSaving(true);
@@ -406,6 +425,7 @@ const EditListing = () => {
                     condition: formData.condition,
                     negotiable: !!formData.negotiable,
                     location: formData.location.trim(),
+                    // stock_count: parseInt(formData.stock_count) || 1,
                     attributes: {
                         ...formData.attributes,
                         // Trim all strings in attributes
@@ -489,7 +509,7 @@ const EditListing = () => {
                     const ext = f.name.split(".").pop();
                     const name = `${crypto?.randomUUID?.() || Math.random()}.${ext}`;
                     const path = `${user.id}/${listingId}/${name}`;
-                    const url = await uploadToBucket("listing-videos", path, f);
+                    const url = await uploadToBucket("listing-images", path, f);
 
                     vRows.push({
                         listing_id: listingId,
@@ -538,8 +558,8 @@ const EditListing = () => {
             </div>
         );
     }
-
-
+    const selectedCat = categories.find((c) => c.id === formData.categoryId);
+    const catName = selectedCat?.name?.toLowerCase() || "";
 
     return (
         <div
@@ -568,7 +588,16 @@ const EditListing = () => {
                         <div className="cl-row">
                             <label className="cl-field">
                                 <span className="cl-label">Title *</span>
-                                <input className="cl-input" value={formData.title} onChange={(e) => updateField("title", e.target.value)} />
+                                <input
+                                    className={`cl-input ${touched.title && !formData.title.trim() ? "is-invalid" : ""}`}
+                                    value={formData.title}
+                                    onChange={(e) => updateField("title", e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="e.g. Logitech MX Master 3S Mouse"
+                                />
+                                {touched.title && !formData.title.trim() && (
+                                    <span className="cl-error-text">Title is required</span>
+                                )}
                             </label>
 
                             <label className="cl-field">
@@ -580,6 +609,8 @@ const EditListing = () => {
                                     min="0"
                                     value={formData.price}
                                     onChange={(e) => updateField("price", e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Enter amount in BDT"
                                 />
                             </label>
                         </div>
@@ -587,38 +618,68 @@ const EditListing = () => {
                         <div className="cl-row">
                             <label className="cl-field">
                                 <span className="cl-label">Condition *</span>
-                                <select className="cl-input" value={formData.condition} onChange={(e) => updateField("condition", e.target.value)}>
+                                <select
+                                    className="cl-input"
+                                    value={formData.condition}
+                                    onChange={(e) => updateField("condition", e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                >
                                     <option value="">Select condition</option>
                                     <option value="new">Brand new</option>
-                                    <option value="like_new">Like new</option>
                                     <option value="used">Used</option>
                                     <option value="refurbished">Refurbished</option>
                                 </select>
                             </label>
 
-                            <label className="cl-field cl-check">
-                                <span className="cl-label">Negotiable</span>
+                            <label className="cl-field">
+                                <span className="cl-label">Quantity / Stock *</span>
                                 <input
-                                    type="checkbox"
-                                    checked={formData.negotiable}
-                                    onChange={(e) => updateField("negotiable", e.target.checked)}
+                                    className="cl-input"
+                                    type="number"
+                                    min="1"
+                                    value={formData.stock_count}
+                                    onChange={(e) => updateField("stock_count", e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Units available"
                                 />
                             </label>
                         </div>
 
                         <label className="cl-field">
-                            <span className="cl-label">Pickup location *</span>
-                            <input className="cl-input" value={formData.location} onChange={(e) => updateField("location", e.target.value)} />
+                            <span className="cl-label">Product Location *</span>
+                            <input
+                                className={`cl-input ${touched.location && !formData.location.trim() ? "is-invalid" : ""}`}
+                                value={formData.location}
+                                onChange={(e) => updateField("location", e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="e.g. Hall 5, North Campus, Library area"
+                            />
+                            {touched.location && !formData.location.trim() && (
+                                <span className="cl-error-text">Location is required</span>
+                            )}
+                        </label>
+
+                        <label className="cl-field cl-check" style={{ marginTop: "12px" }}>
+                            <span className="cl-label cl-label--inline">Negotiable</span>
+                            <input
+                                type="checkbox"
+                                checked={formData.negotiable}
+                                onChange={(e) => updateField("negotiable", e.target.checked)}
+                            />
                         </label>
 
                         <label className="cl-field">
                             <span className="cl-label">Description *</span>
                             <textarea
-                                className="cl-input cl-textarea"
-                                rows={6}
+                                className={`cl-input cl-textarea ${touched.description && !formData.description.trim() ? "is-invalid" : ""}`}
+                                rows={10}
                                 value={formData.description}
                                 onChange={(e) => updateField("description", e.target.value)}
+                                placeholder="Describe the item's condition, features, and any defects. Be as detailed as possible."
                             />
+                            {touched.description && !formData.description.trim() && (
+                                <span className="cl-error-text">Description is required</span>
+                            )}
                         </label>
 
                         <div className="cl-divider" />
@@ -642,125 +703,236 @@ const EditListing = () => {
                             </label>
                         </div>
 
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Color</span>
-                                <input className="cl-input" value={formData.attributes.color} onChange={(e) => updateAttr("color", e.target.value)} placeholder="e.g. Black, White" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">Size</span>
-                                <input className="cl-input" value={formData.attributes.size} onChange={(e) => updateAttr("size", e.target.value)} placeholder="e.g. M, L, XL" />
-                            </label>
-                        </div>
+                        <h3 className="cl-sectionTitle" style={{ marginTop: "1rem" }}>Additional Details</h3>
 
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Material</span>
-                                <input className="cl-input" value={formData.attributes.material} onChange={(e) => updateAttr("material", e.target.value)} placeholder="e.g. Cotton, Leather" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">Weight</span>
-                                <input className="cl-input" value={formData.attributes.weight} onChange={(e) => updateAttr("weight", e.target.value)} placeholder="e.g. 500g, 2kg" />
-                            </label>
-                        </div>
+                        <button
+                            type="button"
+                            className="cl-optionalToggle"
+                            onClick={() => setShowOptional(!showOptional)}
+                        >
+                            <span>Optional Product Details</span>
+                            <span className={`cl-toggleIcon ${showOptional ? "is-open" : ""}`}>▼</span>
+                        </button>
 
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Dimensions (L×W×H)</span>
-                                <input className="cl-input" value={formData.attributes.dimensions} onChange={(e) => updateAttr("dimensions", e.target.value)} placeholder="e.g. 20×15×5 cm" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">Warranty</span>
-                                <input className="cl-input" value={formData.attributes.warranty} onChange={(e) => updateAttr("warranty", e.target.value)} placeholder="e.g. 1 year" />
-                            </label>
-                        </div>
+                        {showOptional && (
+                            <div className="cl-optionalContent">
+                                <h4 className="cl-subsectionTitle">General Information</h4>
+                                <div className="cl-row">
+                                    <label className="cl-field">
+                                        <span className="cl-label">Brand</span>
+                                        <input
+                                            className="cl-input"
+                                            value={formData.attributes.brand}
+                                            onChange={(e) => updateAttr("brand", e.target.value)}
+                                            placeholder="e.g. Apple, Samsung"
+                                        />
+                                    </label>
+                                    <label className="cl-field">
+                                        <span className="cl-label">Model</span>
+                                        <input
+                                            className="cl-input"
+                                            value={formData.attributes.model}
+                                            onChange={(e) => updateAttr("model", e.target.value)}
+                                            placeholder="e.g. iPhone 13"
+                                        />
+                                    </label>
+                                </div>
 
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Year / Age</span>
-                                <input className="cl-input" value={formData.attributes.year} onChange={(e) => updateAttr("year", e.target.value)} placeholder="e.g. 2023" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">Quantity Available</span>
-                                <input className="cl-input" type="number" min="1" value={formData.attributes.quantity} onChange={(e) => updateAttr("quantity", e.target.value)} placeholder="e.g. 1, 5" />
-                            </label>
-                        </div>
+                                {/* Conditional sections */}
+                                {catName.includes("electronics") && (
+                                    <>
+                                        <div className="cl-divider" />
+                                        <h4 className="cl-subsectionTitle">Electronics Details</h4>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Storage</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.storage}
+                                                    onChange={(e) => updateAttr("storage", e.target.value)}
+                                                    placeholder="e.g. 128GB, 256GB, 1TB"
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">RAM</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.ram}
+                                                    onChange={(e) => updateAttr("ram", e.target.value)}
+                                                    placeholder="e.g. 4GB, 8GB, 16GB"
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Processor</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.processor}
+                                                    onChange={(e) => updateAttr("processor", e.target.value)}
+                                                    placeholder="e.g. Intel i5, M1"
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">Screen Size</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.screen_size}
+                                                    onChange={(e) => updateAttr("screen_size", e.target.value)}
+                                                    placeholder="e.g. 6.1 inch"
+                                                />
+                                            </label>
+                                        </div>
+                                    </>
+                                )}
 
-                        {/* Electronics */}
-                        <div className="cl-divider" />
-                        <h4 className="cl-subsectionTitle">Electronics</h4>
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Storage</span>
-                                <input className="cl-input" value={formData.attributes.storage} onChange={(e) => updateAttr("storage", e.target.value)} placeholder="e.g. 128GB, 1TB" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">RAM</span>
-                                <input className="cl-input" value={formData.attributes.ram} onChange={(e) => updateAttr("ram", e.target.value)} placeholder="e.g. 8GB, 16GB" />
-                            </label>
-                        </div>
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Processor</span>
-                                <input className="cl-input" value={formData.attributes.processor} onChange={(e) => updateAttr("processor", e.target.value)} placeholder="e.g. Intel i5" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">Screen Size</span>
-                                <input className="cl-input" value={formData.attributes.screen_size} onChange={(e) => updateAttr("screen_size", e.target.value)} placeholder="e.g. 15.6 inch" />
-                            </label>
-                        </div>
+                                {(catName.includes("clothing") || catName.includes("fashion")) && (
+                                    <>
+                                        <div className="cl-divider" />
+                                        <h4 className="cl-subsectionTitle">Clothing Details</h4>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Fabric</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.fabric}
+                                                    onChange={(e) => updateAttr("fabric", e.target.value)}
+                                                    placeholder="e.g. Cotton"
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">Fit Type</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.fit_type}
+                                                    onChange={(e) => updateAttr("fit_type", e.target.value)}
+                                                    placeholder="e.g. Slim Fit"
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Gender</span>
+                                                <select
+                                                    className="cl-input"
+                                                    value={formData.attributes.gender}
+                                                    onChange={(e) => updateAttr("gender", e.target.value)}
+                                                >
+                                                    <option value="">Select</option>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                    <option value="unisex">Unisex</option>
+                                                </select>
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">Size</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.size}
+                                                    onChange={(e) => updateAttr("size", e.target.value)}
+                                                    placeholder="e.g. L, XL, 42"
+                                                />
+                                            </label>
+                                        </div>
+                                    </>
+                                )}
 
-                        {/* Clothing */}
-                        <div className="cl-divider" />
-                        <h4 className="cl-subsectionTitle">Clothing</h4>
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Fabric</span>
-                                <input className="cl-input" value={formData.attributes.fabric} onChange={(e) => updateAttr("fabric", e.target.value)} placeholder="e.g. Cotton" />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">Fit Type</span>
-                                <input className="cl-input" value={formData.attributes.fit_type} onChange={(e) => updateAttr("fit_type", e.target.value)} placeholder="e.g. Slim" />
-                            </label>
-                        </div>
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Gender</span>
-                                <select className="cl-input" value={formData.attributes.gender} onChange={(e) => updateAttr("gender", e.target.value)}>
-                                    <option value="">Select</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="unisex">Unisex</option>
-                                    <option value="kids">Kids</option>
-                                </select>
-                            </label>
-                            <div className="cl-field cl-field--ghost" />
-                        </div>
+                                {catName.includes("book") && (
+                                    <>
+                                        <div className="cl-divider" />
+                                        <h4 className="cl-subsectionTitle">Book Details</h4>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Author</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.author}
+                                                    onChange={(e) => updateAttr("author", e.target.value)}
+                                                    placeholder="e.g. J.K. Rowling"
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">ISBN</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.isbn}
+                                                    onChange={(e) => updateAttr("isbn", e.target.value)}
+                                                    placeholder="e.g. 978-3-16..."
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Publisher</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.publisher}
+                                                    onChange={(e) => updateAttr("publisher", e.target.value)}
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">Edition</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.edition}
+                                                    onChange={(e) => updateAttr("edition", e.target.value)}
+                                                />
+                                            </label>
+                                        </div>
+                                    </>
+                                )}
 
-                        {/* Books */}
-                        <div className="cl-divider" />
-                        <h4 className="cl-subsectionTitle">Books</h4>
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Author</span>
-                                <input className="cl-input" value={formData.attributes.author} onChange={(e) => updateAttr("author", e.target.value)} />
-                            </label>
-                            <label className="cl-field">
-                                <span className="cl-label">ISBN</span>
-                                <input className="cl-input" value={formData.attributes.isbn} onChange={(e) => updateAttr("isbn", e.target.value)} />
-                            </label>
-                        </div>
+                                {catName.includes("furniture") && (
+                                    <>
+                                        <div className="cl-divider" />
+                                        <h4 className="cl-subsectionTitle">Furniture Details</h4>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Material</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.material}
+                                                    onChange={(e) => updateAttr("material", e.target.value)}
+                                                    placeholder="e.g. Wood, Steel"
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">Dimensions</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.dimensions}
+                                                    onChange={(e) => updateAttr("dimensions", e.target.value)}
+                                                    placeholder="e.g. 120x60x75 cm"
+                                                />
+                                            </label>
+                                        </div>
+                                    </>
+                                )}
 
-                        {/* Others */}
-                        <div className="cl-divider" />
-                        <h4 className="cl-subsectionTitle">Other Details</h4>
-                        <div className="cl-row">
-                            <label className="cl-field">
-                                <span className="cl-label">Assembly Required?</span>
-                                <input className="cl-input" value={formData.attributes.assembly_required} onChange={(e) => updateAttr("assembly_required", e.target.value)} placeholder="e.g. Yes/No" />
-                            </label>
-                            <div className="cl-field cl-field--ghost" />
-                        </div>
+                                {/* Fallback for other categories */}
+                                {(!catName.includes("electronics") && !catName.includes("clothing") && !catName.includes("book") && !catName.includes("furniture")) && (
+                                    <div className="cl-row">
+                                        <label className="cl-field">
+                                            <span className="cl-label">Year / Age</span>
+                                            <input
+                                                className="cl-input"
+                                                value={formData.attributes.year}
+                                                onChange={(e) => updateAttr("year", e.target.value)}
+                                                placeholder="e.g. 2023"
+                                            />
+                                        </label>
+                                        <label className="cl-field">
+                                            <span className="cl-label">Color</span>
+                                            <input
+                                                className="cl-input"
+                                                value={formData.attributes.color}
+                                                onChange={(e) => updateAttr("color", e.target.value)}
+                                            />
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="cl-actions">
                             <button type="button" className="cl-btn cl-btn--soft" onClick={() => navigate("/my-listings")} disabled={saving}>
@@ -786,7 +958,7 @@ const EditListing = () => {
                         <input
                             ref={fileRef}
                             type="file"
-                            accept="image/*,video/mp4"
+                            accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime"
                             multiple
                             style={{ display: "none" }}
                             onChange={(e) => processFiles(e.target.files)}

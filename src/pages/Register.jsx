@@ -86,7 +86,7 @@ const Register = () => {
                             id="fullName"
                             value={formData.fullName}
                             onChange={handleChange}
-                            placeholder="John Doe"
+                            placeholder="Your full name as per university records"
                             required
                         />
                     </div>
@@ -98,7 +98,7 @@ const Register = () => {
                             id="email"
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="your.email@university.edu"
+                            placeholder="yourname@university.edu (Required for verification)"
                             required
                         />
                     </div>
@@ -110,7 +110,7 @@ const Register = () => {
                             id="password"
                             value={formData.password}
                             onChange={handleChange}
-                            placeholder="Create a strong password"
+                            placeholder="Minimum 6 characters for security"
                             required
                         />
                     </div>
@@ -122,7 +122,7 @@ const Register = () => {
                             id="confirmPassword"
                             value={formData.confirmPassword}
                             onChange={handleChange}
-                            placeholder="Confirm your password"
+                            placeholder="Re-type your password to confirm"
                             required
                         />
                     </div>

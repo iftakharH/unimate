@@ -228,7 +228,7 @@ const UserProfile = () => {
                                         <div className="user-profile-listing-content">
                                             <h3 className="user-profile-listing-title">{listing.title}</h3>
                                             <div className="user-profile-listing-meta">
-                                                <span className="user-profile-listing-price">${listing.price}</span>
+                                                <span className="user-profile-listing-price">{listing.price} BDT</span>
                                                 <span className="user-profile-listing-condition">{listing.condition}</span>
                                             </div>
                                         </div>

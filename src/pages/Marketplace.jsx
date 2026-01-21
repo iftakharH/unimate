@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { chatService } from "../services/chatService";
+import Modal from "../components/Modal";
 import "../styles/Marketplace.css";
 
 const PLACEHOLDER_IMG =
@@ -24,6 +25,9 @@ const Marketplace = () => {
     const [selectedColors, setSelectedColors] = useState(new Set());
     const [selectedMaterials, setSelectedMaterials] = useState(new Set());
     const [selectedSizes, setSelectedSizes] = useState(new Set());
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
 
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -65,7 +69,15 @@ const Marketplace = () => {
         }
 
         if (user.id === listing.seller_id) {
-            alert("You cannot chat with yourself!");
+            setModal({
+                isOpen: true,
+                title: "Information",
+                message: "You cannot chat with yourself!",
+                type: "info",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
             return;
         }
 
@@ -78,7 +90,15 @@ const Marketplace = () => {
             navigate(`/chat/${chatId}`);
         } catch (error) {
             console.error("Error starting chat:", error);
-            alert("Could not start chat. Please try again.");
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Could not start chat. Please try again later.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         }
     };
 
@@ -221,7 +241,15 @@ const Marketplace = () => {
             const matchesPrice =
                 Number.isNaN(p) ? true : p >= priceMin && p <= priceMax;
 
+            // ✅ Expiry Check (30 days)
+            const created = new Date(item.created_at);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const isExpired = diffDays > 30;
+
             return (
+                !isExpired &&
                 matchesSearch &&
                 matchesStock &&
                 matchesType &&
@@ -299,7 +327,7 @@ const Marketplace = () => {
                         <input
                             className="mp-searchbar"
                             type="text"
-                            placeholder="Search items..."
+                            placeholder="Search products, categories, or brands..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -582,7 +610,7 @@ const Marketplace = () => {
                                                 {item.title}
                                             </button>
 
-                                            <div className="mp-card__price">${item.price}</div>
+                                            <div className="mp-card__price">{item.price} BDT</div>
                                         </div>
                                     </article>
                                 ))}
@@ -591,6 +619,16 @@ const Marketplace = () => {
                     </div>
                 </div>
             </section>
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };

@@ -1,0 +1,118 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 450px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: modal-enter 0.3s ease;
+}
+
+@keyframes modal-enter {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modal-header.danger {
+    background: #ef4444;
+    color: #fff;
+}
+
+.modal-header.info,
+.modal-header.success {
+    background: #e7b22f;
+    /* Gold theme */
+    color: #111;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: currentColor;
+    opacity: 0.8;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    background: #f9fafb;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modal-btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.modal-btn-cancel {
+    background: #fff;
+    border-color: #d1d5db;
+    color: #374151;
+}
+
+.modal-btn-cancel:hover {
+    background: #f3f4f6;
+}
+
+.modal-btn-confirm.info,
+.modal-btn-confirm.success {
+    background: #e7b22f;
+    color: #111;
+}
+
+.modal-btn-confirm:hover {
+    filter: brightness(0.9);
+}

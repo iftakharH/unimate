@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { chatService } from "../services/chatService";
+import Modal from "../components/Modal";
 import "../styles/Chat.css";
 
 const pickImage = (image_url) => {
@@ -28,6 +29,9 @@ const Chat = () => {
     const [chatInfo, setChatInfo] = useState(null);
     const [sending, setSending] = useState(false);
     const [uploading, setUploading] = useState(false);
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
 
     const isSeller = useMemo(() => {
         if (!user || !chatInfo) return false;
@@ -202,14 +206,30 @@ const Chat = () => {
         const isImage = file.type.startsWith("image/");
 
         if (!isImage && !isVideo) {
-            alert("Only image and video files are allowed.");
+            setModal({
+                isOpen: true,
+                title: "Invalid File Type",
+                message: "Only image and video files are allowed.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
             return;
         }
 
         // Limits: 6MB for images, 20MB for videos
         const maxMB = isVideo ? 20 : 6;
         if (file.size > maxMB * 1024 * 1024) {
-            alert(`${isVideo ? "Video" : "Image"} is too large. Max ${maxMB}MB.`);
+            setModal({
+                isOpen: true,
+                title: "File Too Large",
+                message: `${isVideo ? "Video" : "Image"} is too large. Max allowed size is ${maxMB}MB.`,
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
             return;
         }
 
@@ -226,17 +246,36 @@ const Chat = () => {
             console.log("Chat media uploaded successfully:", publicUrl);
         } catch (err) {
             console.error("Upload/send media error:", err);
-            const msg = err.message || "Failed to upload file.";
-            alert(`Upload Error: ${msg}\n\nMake sure you have a public bucket named 'chat-media' with correct policies.`);
+            setModal({
+                isOpen: true,
+                title: "Upload Error",
+                message: err.message || "Failed to upload file. Please check your connection and try again.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         } finally {
             setUploading(false);
         }
     };
 
-    const handleMarkSold = async () => {
+    const handleMarkSold = () => {
         if (!chatInfo || !user) return;
-        if (!window.confirm("Mark as SOLD to this buyer?")) return;
+        setModal({
+            isOpen: true,
+            title: "Confirm Sale",
+            message: "Are you sure you want to mark this item as SOLD? This action will notify the buyer and update the listing status.",
+            type: "info",
+            confirmText: "Confirm Sale",
+            cancelText: "Not yet",
+            onConfirm: performMarkSold,
+            onClose: () => setModal({ ...modal, isOpen: false })
+        });
+    };
 
+    const performMarkSold = async () => {
+        setModal({ ...modal, isOpen: false });
         try {
             const newDeal = await chatService.createDeal(
                 chatId,
@@ -254,7 +293,15 @@ const Chat = () => {
             );
         } catch (error) {
             console.error("Error marking deal:", error);
-            alert("Failed to mark deal");
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Failed to mark item as sold. Please try again later.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         }
     };
 
@@ -302,7 +349,7 @@ const Chat = () => {
                             </div>
                             <div className="chat-subline">
                                 <span className="chat-item-price">
-                                    {chatInfo?.listings?.price != null ? `$${chatInfo.listings.price}` : ""}
+                                    {chatInfo?.listings?.price != null ? `${chatInfo.listings.price} BDT` : ""}
                                 </span>
                                 {deal && <span className="chat-sold-pill">Sold</span>}
                             </div>
@@ -334,17 +381,21 @@ const Chat = () => {
                     )}
 
                     <div className="chat-actions">
-                        {deal ? (
-                            <div className="deal-status">✅ Sold</div>
-                        ) : (
-                            isSeller && (
-                                <button onClick={handleMarkSold} className="btn-mark-sold">
-                                    Mark as Sold
-                                </button>
-                            )
-                        )}
+                        {deal && <div className="deal-status">✅ Sold</div>}
                     </div>
                 </div>
+
+                {/* Sell Banner - Only shown to seller if not sold yet */}
+                {isSeller && !deal && (
+                    <div className="chat-sell-banner">
+                        <div className="chat-sell-banner__content">
+                            <span>Ready to complete this transaction?</span>
+                            <button onClick={handleMarkSold} className="btn-mark-sold">
+                                Mark as Sold
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Messages */}
                 <div className="chat-messages">
@@ -445,6 +496,17 @@ const Chat = () => {
                     </button>
                 </form>
             </div>
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+                cancelText={modal.cancelText}
+            />
         </div>
     );
 };

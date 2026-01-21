@@ -16,6 +16,8 @@ import SavedItems from "../pages/SavedItems";
 import Settings from "../pages/Settings";
 import Security from "../pages/Security";
 import UserProfile from "../pages/UserProfile";
+import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 import { AuthProvider } from "../context/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Footer from "../components/Footer";
@@ -32,6 +34,8 @@ const AppRoutes = () => {
                     {/* Public Routes */}
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
 
                     {/* Protected Routes */}
                     <Route element={<ProtectedRoute />}>

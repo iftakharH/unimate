@@ -10,7 +10,7 @@ const MAX_VIDEOS = 2;
 const MAX_VIDEO_MB = 20;
 
 const ACCEPTED_IMAGE = ["image/jpeg", "image/png", "image/webp"];
-const ACCEPTED_VIDEO = ["video/mp4"];
+const ACCEPTED_VIDEO = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
 
 // ✅ block common personal/commercial email providers
 const COMMERCIAL_DOMAINS = new Set([
@@ -80,6 +80,8 @@ const CreateListing = () => {
         currency: "BDT",
         condition: "",
         negotiable: false,
+        location: "",
+        stock_count: 1,
         description: "",
         attributes: {
             // General
@@ -120,9 +122,14 @@ const CreateListing = () => {
     const [images, setImages] = useState([]);
     const [imagePreviews, setImagePreviews] = useState([]);
     const [videos, setVideos] = useState([]);
+    const [videoPreviews, setVideoPreviews] = useState([]);
+
+    const [touched, setTouched] = useState({});
 
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+
+    const [showOptional, setShowOptional] = useState(false);
 
     // categories
     useEffect(() => {
@@ -130,7 +137,6 @@ const CreateListing = () => {
             const { data, error } = await supabase
                 .from("categories")
                 .select("id, name")
-                .eq("is_active", true)
                 .order("sort_order", { ascending: true });
 
             if (!error) setCategories(data || []);
@@ -172,7 +178,9 @@ const CreateListing = () => {
                 !Number.isNaN(Number(formData.price)) &&
                 Number(formData.price) >= 0;
 
-            return formData.title.trim().length > 0 && priceOk && formData.condition.trim().length > 0;
+            const locationOk = formData.location.trim().length > 0;
+
+            return formData.title.trim().length > 0 && priceOk && formData.condition.trim().length > 0 && locationOk;
         }
 
         if (step === 3) return formData.description.trim().length > 0;
@@ -182,9 +190,14 @@ const CreateListing = () => {
         return false;
     }, [step, formData, images.length]);
 
-    const updateField = (key, value) => setFormData((p) => ({ ...p, [key]: value }));
-    const updateAttr = (key, value) =>
+    const updateField = (key, value) => {
+        setFormData((p) => ({ ...p, [key]: value }));
+        setTouched((p) => ({ ...p, [key]: true }));
+    };
+    const updateAttr = (key, value) => {
         setFormData((p) => ({ ...p, attributes: { ...p.attributes, [key]: value } }));
+        setTouched((p) => ({ ...p, [`attr_${key}`]: true }));
+    };
 
     const validateAndAddImages = (fileList) => {
         const incoming = Array.from(fileList || []);
@@ -220,12 +233,13 @@ const CreateListing = () => {
         if (!incoming.length) return;
 
         const next = [...videos];
+        const nextPrev = [...videoPreviews];
 
         for (const f of incoming) {
             if (next.length >= MAX_VIDEOS) break;
 
             if (!ACCEPTED_VIDEO.includes(f.type)) {
-                setErrorMsg("Only MP4 videos are allowed.");
+                setErrorMsg("Only MP4, WEBM, OGG, MOV videos are allowed.");
                 continue;
             }
 
@@ -236,9 +250,11 @@ const CreateListing = () => {
             }
 
             next.push(f);
+            nextPrev.push(URL.createObjectURL(f));
         }
 
         setVideos(next);
+        setVideoPreviews(nextPrev);
     };
 
     const removeImageAt = (idx) => {
@@ -246,12 +262,36 @@ const CreateListing = () => {
         setImagePreviews((p) => p.filter((_, i) => i !== idx));
     };
 
-    const removeVideoAt = (idx) => setVideos((p) => p.filter((_, i) => i !== idx));
+    const removeVideoAt = (idx) => {
+        setVideos((p) => p.filter((_, i) => i !== idx));
+        setVideoPreviews((p) => p.filter((_, i) => i !== idx));
+    };
+
+    const processFiles = (files) => {
+        const incoming = Array.from(files || []);
+        const img = [];
+        const vid = [];
+
+        incoming.forEach(f => {
+            if (f.type.startsWith("image/")) img.push(f);
+            else if (f.type.startsWith("video/")) vid.push(f);
+        });
+
+        if (img.length) validateAndAddImages(img);
+        if (vid.length) validateAndAddVideos(vid);
+    };
 
     const goNext = () => {
         setErrorMsg("");
         if (!canGoNext) return;
         setStep((s) => Math.min(5, s + 1));
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter" && canGoNext) {
+            e.preventDefault();
+            goNext();
+        }
     };
 
     const goBack = () => {
@@ -290,45 +330,14 @@ const CreateListing = () => {
                 description: formData.description.trim(),
                 price: parseFloat(formData.price),
                 currency: formData.currency,
-                seller_id: user.id,
-                category_id: formData.categoryId,
                 condition: formData.condition,
-                status: "active",
                 negotiable: !!formData.negotiable,
-                attributes: {
-                    // General
-                    brand: formData.attributes.brand?.trim() || null,
-                    model: formData.attributes.model?.trim() || null,
-                    color: formData.attributes.color?.trim() || null,
-                    size: formData.attributes.size?.trim() || null,
-                    material: formData.attributes.material?.trim() || null,
-                    weight: formData.attributes.weight?.trim() || null,
-                    dimensions: formData.attributes.dimensions?.trim() || null,
-                    warranty: formData.attributes.warranty?.trim() || null,
-                    year: formData.attributes.year?.trim() || null,
-                    quantity: formData.attributes.quantity?.trim() || null,
-                    // Electronics
-                    storage: formData.attributes.storage?.trim() || null,
-                    ram: formData.attributes.ram?.trim() || null,
-                    processor: formData.attributes.processor?.trim() || null,
-                    screen_size: formData.attributes.screen_size?.trim() || null,
-                    battery: formData.attributes.battery?.trim() || null,
-                    // Clothing
-                    fabric: formData.attributes.fabric?.trim() || null,
-                    fit_type: formData.attributes.fit_type?.trim() || null,
-                    gender: formData.attributes.gender?.trim() || null,
-                    // Books
-                    author: formData.attributes.author?.trim() || null,
-                    isbn: formData.attributes.isbn?.trim() || null,
-                    publisher: formData.attributes.publisher?.trim() || null,
-                    edition: formData.attributes.edition?.trim() || null,
-                    language: formData.attributes.language?.trim() || null,
-                    // Furniture
-                    assembly_required: formData.attributes.assembly_required?.trim() || null,
-                    // Additional
-                    custom_field_1: formData.attributes.custom_field_1?.trim() || null,
-                    custom_field_2: formData.attributes.custom_field_2?.trim() || null,
-                },
+                location: formData.location.trim(),
+                // stock_count: parseInt(formData.stock_count) || 1,
+                category_id: formData.categoryId,
+                seller_id: user.id,
+                attributes: formData.attributes,
+                // is_active: true,
             };
 
             const { data: listing, error: insertError } = await supabase
@@ -388,7 +397,7 @@ const CreateListing = () => {
                     const ext = f.name.split(".").pop();
                     const fileName = `${crypto?.randomUUID?.() || Math.random()}.${ext}`;
                     const path = `${user.id}/${listingId}/${fileName}`;
-                    const url = await uploadToBucket("listing-videos", path, f);
+                    const url = await uploadToBucket("listing-images", path, f);
 
                     videoRows.push({
                         listing_id: listingId,
@@ -531,7 +540,8 @@ const CreateListing = () => {
                                         className="cl-input"
                                         value={formData.title}
                                         onChange={(e) => updateField("title", e.target.value)}
-                                        placeholder="e.g. Logitech Mouse M170"
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="e.g. Logitech MX Master 3S Mouse"
                                     />
                                 </label>
 
@@ -544,7 +554,8 @@ const CreateListing = () => {
                                         min="0"
                                         value={formData.price}
                                         onChange={(e) => updateField("price", e.target.value)}
-                                        placeholder="500"
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Enter amount in BDT"
                                     />
                                 </label>
                             </div>
@@ -556,6 +567,7 @@ const CreateListing = () => {
                                         className="cl-input"
                                         value={formData.condition}
                                         onChange={(e) => updateField("condition", e.target.value)}
+                                        onKeyDown={handleKeyDown}
                                     >
                                         <option value="">Select condition</option>
                                         <option value="new">Brand new</option>
@@ -564,7 +576,36 @@ const CreateListing = () => {
                                     </select>
                                 </label>
 
-                                <label className="cl-field cl-check">
+                                <label className="cl-field">
+                                    <span className="cl-label">Quantity / Stock *</span>
+                                    <input
+                                        className="cl-input"
+                                        type="number"
+                                        min="1"
+                                        value={formData.stock_count}
+                                        onChange={(e) => updateField("stock_count", e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Units available"
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="cl-row">
+                                <label className="cl-field">
+                                    <span className="cl-label">Product Location *</span>
+                                    <input
+                                        className={`cl-input ${touched.location && !formData.location.trim() ? "is-invalid" : ""}`}
+                                        value={formData.location}
+                                        onChange={(e) => updateField("location", e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="e.g. Hall 5, North Campus, Library area"
+                                    />
+                                    {touched.location && !formData.location.trim() && (
+                                        <span className="cl-error-text">Location is required</span>
+                                    )}
+                                </label>
+
+                                <label className="cl-field cl-check" style={{ alignSelf: "center", marginTop: "12px" }}>
                                     <span className="cl-label cl-label--inline">Negotiable</span>
                                     <input
                                         type="checkbox"
@@ -577,337 +618,265 @@ const CreateListing = () => {
                     )}
 
                     {/* STEP 3 */}
-                    {step === 3 && (
-                        <>
-                            <h2 className="cl-cardTitle">Details</h2>
-                            <label className="cl-field">
-                                <span className="cl-label">Description *</span>
-                                <textarea
-                                    className="cl-input cl-textarea"
-                                    rows={7}
-                                    value={formData.description}
-                                    onChange={(e) => updateField("description", e.target.value)}
-                                    placeholder="Condition, what's included, any defects, etc."
-                                />
-                            </label>
+                    {step === 3 && (() => {
+                        const selectedCat = categories.find((c) => c.id === formData.categoryId);
+                        const catName = selectedCat?.name?.toLowerCase() || "";
 
-                            <div className="cl-divider" />
-                            <h3 className="cl-sectionTitle">Optional Product Details</h3>
-                            <p className="cl-cardHint" style={{ marginBottom: "1rem" }}>
-                                Fill in relevant fields for your product. All fields are optional.
-                            </p>
+                        return (
+                            <>
+                                <h2 className="cl-cardTitle">Details</h2>
+                                <label className="cl-field">
+                                    <span className="cl-label">Description *</span>
+                                    <textarea
+                                        className={`cl-input cl-textarea ${touched.description && !formData.description.trim() ? "is-invalid" : ""}`}
+                                        rows={7}
+                                        value={formData.description}
+                                        onChange={(e) => updateField("description", e.target.value)}
+                                        placeholder="Describe the item's condition, features, and any defects. Be as detailed as possible."
+                                    />
+                                    {touched.description && !formData.description.trim() && (
+                                        <span className="cl-error-text">Description is required</span>
+                                    )}
+                                </label>
 
-                            {/* General Attributes */}
-                            <h4 className="cl-subsectionTitle">General Information</h4>
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Brand</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.brand}
-                                        onChange={(e) => updateAttr("brand", e.target.value)}
-                                        placeholder="e.g. Apple, Samsung"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Model</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.model}
-                                        onChange={(e) => updateAttr("model", e.target.value)}
-                                        placeholder="e.g. iPhone 13, Galaxy S21"
-                                    />
-                                </label>
-                            </div>
+                                <div className="cl-divider" />
+                                <button
+                                    type="button"
+                                    className="cl-optionalToggle"
+                                    onClick={() => setShowOptional(!showOptional)}
+                                >
+                                    <span>Optional Product Details</span>
+                                    <span className={`cl-toggleIcon ${showOptional ? "is-open" : ""}`}>▼</span>
+                                </button>
 
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Color</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.color}
-                                        onChange={(e) => updateAttr("color", e.target.value)}
-                                        placeholder="e.g. Black, White"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Size</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.size}
-                                        onChange={(e) => updateAttr("size", e.target.value)}
-                                        placeholder="e.g. M, L, XL"
-                                    />
-                                </label>
-                            </div>
+                                {showOptional && (
+                                    <div className="cl-optionalContent">
+                                        <p className="cl-cardHint" style={{ marginBottom: "1rem" }}>
+                                            Fill in relevant fields for your product. All fields are optional.
+                                        </p>
 
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Material</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.material}
-                                        onChange={(e) => updateAttr("material", e.target.value)}
-                                        placeholder="e.g. Cotton, Leather, Plastic"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Weight</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.weight}
-                                        onChange={(e) => updateAttr("weight", e.target.value)}
-                                        placeholder="e.g. 500g, 2kg"
-                                    />
-                                </label>
-                            </div>
+                                        {/* General Attributes */}
+                                        <h4 className="cl-subsectionTitle">General Information</h4>
+                                        <div className="cl-row">
+                                            <label className="cl-field">
+                                                <span className="cl-label">Brand</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.brand}
+                                                    onChange={(e) => updateAttr("brand", e.target.value)}
+                                                    placeholder="e.g. Apple, Samsung"
+                                                />
+                                            </label>
+                                            <label className="cl-field">
+                                                <span className="cl-label">Model</span>
+                                                <input
+                                                    className="cl-input"
+                                                    value={formData.attributes.model}
+                                                    onChange={(e) => updateAttr("model", e.target.value)}
+                                                    placeholder="e.g. iPhone 13, Galaxy S21"
+                                                />
+                                            </label>
+                                        </div>
 
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Dimensions (L×W×H)</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.dimensions}
-                                        onChange={(e) => updateAttr("dimensions", e.target.value)}
-                                        placeholder="e.g. 20×15×5 cm"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Warranty</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.warranty}
-                                        onChange={(e) => updateAttr("warranty", e.target.value)}
-                                        placeholder="e.g. 1 year, No warranty"
-                                    />
-                                </label>
-                            </div>
+                                        {/* Conditional sections */}
+                                        {catName.includes("electronics") && (
+                                            <>
+                                                <div className="cl-divider" />
+                                                <h4 className="cl-subsectionTitle">Electronics Details</h4>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Storage</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.storage}
+                                                            onChange={(e) => updateAttr("storage", e.target.value)}
+                                                            placeholder="e.g. 128GB, 256GB, 1TB"
+                                                        />
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">RAM</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.ram}
+                                                            onChange={(e) => updateAttr("ram", e.target.value)}
+                                                            placeholder="e.g. 4GB, 8GB, 16GB"
+                                                        />
+                                                    </label>
+                                                </div>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Processor</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.processor}
+                                                            onChange={(e) => updateAttr("processor", e.target.value)}
+                                                            placeholder="e.g. Intel i5, M1"
+                                                        />
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Screen Size</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.screen_size}
+                                                            onChange={(e) => updateAttr("screen_size", e.target.value)}
+                                                            placeholder="e.g. 6.1 inch"
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
 
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Year / Age</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.year}
-                                        onChange={(e) => updateAttr("year", e.target.value)}
-                                        placeholder="e.g. 2023, 2 years old"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Quantity Available</span>
-                                    <input
-                                        className="cl-input"
-                                        type="number"
-                                        min="1"
-                                        value={formData.attributes.quantity}
-                                        onChange={(e) => updateAttr("quantity", e.target.value)}
-                                        placeholder="e.g. 1, 5"
-                                    />
-                                </label>
-                            </div>
+                                        {(catName.includes("clothing") || catName.includes("fashion")) && (
+                                            <>
+                                                <div className="cl-divider" />
+                                                <h4 className="cl-subsectionTitle">Clothing Details</h4>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Fabric</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.fabric}
+                                                            onChange={(e) => updateAttr("fabric", e.target.value)}
+                                                            placeholder="e.g. Cotton"
+                                                        />
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Fit Type</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.fit_type}
+                                                            onChange={(e) => updateAttr("fit_type", e.target.value)}
+                                                            placeholder="e.g. Slim Fit"
+                                                        />
+                                                    </label>
+                                                </div>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Gender</span>
+                                                        <select
+                                                            className="cl-input"
+                                                            value={formData.attributes.gender}
+                                                            onChange={(e) => updateAttr("gender", e.target.value)}
+                                                        >
+                                                            <option value="">Select</option>
+                                                            <option value="male">Male</option>
+                                                            <option value="female">Female</option>
+                                                            <option value="unisex">Unisex</option>
+                                                        </select>
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Size</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.size}
+                                                            onChange={(e) => updateAttr("size", e.target.value)}
+                                                            placeholder="e.g. L, XL, 42"
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
 
-                            {/* Electronics */}
-                            <div className="cl-divider" />
-                            <h4 className="cl-subsectionTitle">Electronics (if applicable)</h4>
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Storage</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.storage}
-                                        onChange={(e) => updateAttr("storage", e.target.value)}
-                                        placeholder="e.g. 128GB, 256GB, 1TB"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">RAM</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.ram}
-                                        onChange={(e) => updateAttr("ram", e.target.value)}
-                                        placeholder="e.g. 4GB, 8GB, 16GB"
-                                    />
-                                </label>
-                            </div>
+                                        {catName.includes("book") && (
+                                            <>
+                                                <div className="cl-divider" />
+                                                <h4 className="cl-subsectionTitle">Book Details</h4>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Author</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.author}
+                                                            onChange={(e) => updateAttr("author", e.target.value)}
+                                                            placeholder="e.g. J.K. Rowling"
+                                                        />
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">ISBN</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.isbn}
+                                                            onChange={(e) => updateAttr("isbn", e.target.value)}
+                                                            placeholder="e.g. 978-3-16..."
+                                                        />
+                                                    </label>
+                                                </div>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Publisher</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.publisher}
+                                                            onChange={(e) => updateAttr("publisher", e.target.value)}
+                                                        />
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Edition</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.edition}
+                                                            onChange={(e) => updateAttr("edition", e.target.value)}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
 
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Processor</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.processor}
-                                        onChange={(e) => updateAttr("processor", e.target.value)}
-                                        placeholder="e.g. Intel i5, M1, Snapdragon"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Screen Size</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.screen_size}
-                                        onChange={(e) => updateAttr("screen_size", e.target.value)}
-                                        placeholder="e.g. 6.1 inch, 15.6 inch"
-                                    />
-                                </label>
-                            </div>
+                                        {catName.includes("furniture") && (
+                                            <>
+                                                <div className="cl-divider" />
+                                                <h4 className="cl-subsectionTitle">Furniture Details</h4>
+                                                <div className="cl-row">
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Material</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.material}
+                                                            onChange={(e) => updateAttr("material", e.target.value)}
+                                                            placeholder="e.g. Wood, Steel"
+                                                        />
+                                                    </label>
+                                                    <label className="cl-field">
+                                                        <span className="cl-label">Dimensions</span>
+                                                        <input
+                                                            className="cl-input"
+                                                            value={formData.attributes.dimensions}
+                                                            onChange={(e) => updateAttr("dimensions", e.target.value)}
+                                                            placeholder="e.g. 120x60x75 cm"
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
 
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Battery</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.battery}
-                                        onChange={(e) => updateAttr("battery", e.target.value)}
-                                        placeholder="e.g. 4000mAh, 10 hours"
-                                    />
-                                </label>
-                                <div className="cl-field cl-field--ghost" />
-                            </div>
+                                        {/* Fallback for other categories */}
+                                        {(!catName.includes("electronics") && !catName.includes("clothing") && !catName.includes("book") && !catName.includes("furniture")) && (
+                                            <div className="cl-row">
+                                                <label className="cl-field">
+                                                    <span className="cl-label">Year / Age</span>
+                                                    <input
+                                                        className="cl-input"
+                                                        value={formData.attributes.year}
+                                                        onChange={(e) => updateAttr("year", e.target.value)}
+                                                        placeholder="e.g. 2023"
+                                                    />
+                                                </label>
+                                                <label className="cl-field">
+                                                    <span className="cl-label">Color</span>
+                                                    <input
+                                                        className="cl-input"
+                                                        value={formData.attributes.color}
+                                                        onChange={(e) => updateAttr("color", e.target.value)}
+                                                    />
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
 
-                            {/* Clothing */}
-                            <div className="cl-divider" />
-                            <h4 className="cl-subsectionTitle">Clothing & Apparel (if applicable)</h4>
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Fabric</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.fabric}
-                                        onChange={(e) => updateAttr("fabric", e.target.value)}
-                                        placeholder="e.g. Cotton, Polyester, Denim"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Fit Type</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.fit_type}
-                                        onChange={(e) => updateAttr("fit_type", e.target.value)}
-                                        placeholder="e.g. Slim, Regular, Loose"
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Gender</span>
-                                    <select
-                                        className="cl-input"
-                                        value={formData.attributes.gender}
-                                        onChange={(e) => updateAttr("gender", e.target.value)}
-                                    >
-                                        <option value="">Select</option>
-                                        <option value="male">Male</option>
-                                        <option value="female">Female</option>
-                                        <option value="unisex">Unisex</option>
-                                    </select>
-                                </label>
-                                <div className="cl-field cl-field--ghost" />
-                            </div>
-
-                            {/* Books */}
-                            <div className="cl-divider" />
-                            <h4 className="cl-subsectionTitle">Books (if applicable)</h4>
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Author</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.author}
-                                        onChange={(e) => updateAttr("author", e.target.value)}
-                                        placeholder="e.g. J.K. Rowling"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">ISBN</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.isbn}
-                                        onChange={(e) => updateAttr("isbn", e.target.value)}
-                                        placeholder="e.g. 978-0-123456-78-9"
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Publisher</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.publisher}
-                                        onChange={(e) => updateAttr("publisher", e.target.value)}
-                                        placeholder="e.g. Penguin Books"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Edition</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.edition}
-                                        onChange={(e) => updateAttr("edition", e.target.value)}
-                                        placeholder="e.g. 1st, 2nd, Revised"
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Language</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.language}
-                                        onChange={(e) => updateAttr("language", e.target.value)}
-                                        placeholder="e.g. English, Bengali"
-                                    />
-                                </label>
-                                <div className="cl-field cl-field--ghost" />
-                            </div>
-
-                            {/* Furniture */}
-                            <div className="cl-divider" />
-                            <h4 className="cl-subsectionTitle">Furniture (if applicable)</h4>
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Assembly Required</span>
-                                    <select
-                                        className="cl-input"
-                                        value={formData.attributes.assembly_required}
-                                        onChange={(e) => updateAttr("assembly_required", e.target.value)}
-                                    >
-                                        <option value="">Select</option>
-                                        <option value="yes">Yes</option>
-                                        <option value="no">No</option>
-                                        <option value="partial">Partial</option>
-                                    </select>
-                                </label>
-                                <div className="cl-field cl-field--ghost" />
-                            </div>
-
-                            {/* Custom Fields */}
-                            <div className="cl-divider" />
-                            <h4 className="cl-subsectionTitle">Additional Information</h4>
-                            <div className="cl-row">
-                                <label className="cl-field">
-                                    <span className="cl-label">Custom Field 1</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.custom_field_1}
-                                        onChange={(e) => updateAttr("custom_field_1", e.target.value)}
-                                        placeholder="Any other detail"
-                                    />
-                                </label>
-                                <label className="cl-field">
-                                    <span className="cl-label">Custom Field 2</span>
-                                    <input
-                                        className="cl-input"
-                                        value={formData.attributes.custom_field_2}
-                                        onChange={(e) => updateAttr("custom_field_2", e.target.value)}
-                                        placeholder="Any other detail"
-                                    />
-                                </label>
-                            </div>
-                        </>
-                    )}
 
                     {/* STEP 4 */}
                     {step === 4 && (
@@ -927,7 +896,7 @@ const CreateListing = () => {
                                 onDrop={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    validateAndAddImages(e.dataTransfer.files);
+                                    processFiles(e.dataTransfer.files);
                                 }}
                                 onPaste={(e) => {
                                     const items = e.clipboardData?.items || [];
@@ -938,14 +907,14 @@ const CreateListing = () => {
                                             if (f) files.push(f);
                                         }
                                     }
-                                    if (files.length) validateAndAddImages(files);
+                                    if (files.length) processFiles(files);
                                 }}
                                 onClick={() => imgRef.current?.click()}
                             >
                                 <div className="cl-dropzoneIcon">⬆</div>
-                                <div className="cl-dropzoneTitle">Drop images here</div>
+                                <div className="cl-dropzoneTitle">Drop media here</div>
                                 <div className="cl-dropzoneMeta">
-                                    Click to browse • Paste (Ctrl+V) • {MAX_IMAGE_MB}MB each • JPG/PNG/WEBP
+                                    Browse • Paste (Ctrl+V) • Images ({MAX_IMAGE_MB}MB) & Videos ({MAX_VIDEO_MB}MB)
                                 </div>
                             </div>
 
@@ -969,10 +938,10 @@ const CreateListing = () => {
                             <input
                                 ref={imgRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime"
                                 multiple
                                 style={{ display: "none" }}
-                                onChange={(e) => validateAndAddImages(e.target.files)}
+                                onChange={(e) => processFiles(e.target.files)}
                             />
                             <input
                                 ref={vidRef}
@@ -1006,6 +975,28 @@ const CreateListing = () => {
                                     ))}
                                 </div>
                             )}
+
+                            {videos.length > 0 && (
+                                <>
+                                    <div className="cl-divider" />
+                                    <h3 className="cl-sectionTitle">
+                                        Videos ({videos.length}/{MAX_VIDEOS})
+                                    </h3>
+                                    <div className="cl-mediaGrid">
+                                        {videoPreviews.map((src, idx) => (
+                                            <div className="cl-mediaTile" key={src}>
+                                                <video src={src} className="cl-mediaImg" controls muted />
+                                                <div className="cl-mediaBar">
+                                                    <span className="cl-mediaTag">Video #{idx + 1}</span>
+                                                    <button type="button" className="cl-link" onClick={() => removeVideoAt(idx)}>
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </>
                     )}
 
@@ -1031,6 +1022,10 @@ const CreateListing = () => {
                                 <div>
                                     <strong>Condition</strong>
                                     <span>{formData.condition || "-"}</span>
+                                </div>
+                                <div>
+                                    <strong>Location</strong>
+                                    <span>{formData.location || "-"}</span>
                                 </div>
                                 <div>
                                     <strong>Negotiable</strong>
@@ -1080,9 +1075,9 @@ const CreateListing = () => {
                             </button>
                         ) : null}
                     </div>
-                </section>
-            </div>
-        </div>
+                </section >
+            </div >
+        </div >
     );
 };
 

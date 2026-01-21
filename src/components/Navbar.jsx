@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import logo from "../assets/UnimateLogo1.png";
 const Navbar = () => {
     const { user, signOut } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -114,19 +115,27 @@ const Navbar = () => {
 
     const closeMenu = () => setMenuOpen(false);
 
+    const handleLinkClick = (e, path) => {
+        if (location.pathname === path) {
+            e.preventDefault();
+            window.location.reload();
+        }
+        closeMenu();
+    };
+
     return (
         <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""}`}>
             <div className="nav-container">
-                <Link to={user ? "/marketplace" : "/"} className="nav-logo" onClick={closeMenu}>
+                <Link to={user ? "/marketplace" : "/"} className="nav-logo" onClick={(e) => handleLinkClick(e, user ? "/marketplace" : "/")}>
                     <span className="logo-icon">
                         <img src={logo} alt="Unimates Logo" />
                     </span>
                 </Link>
 
                 <ul className="nav-menu">
-                    <li><Link to="/marketplace" className="nav-link">Market Place</Link></li>
-                    <li><Link to="/create-listing" className="nav-link">Grow</Link></li>
-                    <li><Link to="/my-listings" className="nav-link">My Listings</Link></li>
+                    <li><Link to="/marketplace" className="nav-link" onClick={(e) => handleLinkClick(e, "/marketplace")}>Market Place</Link></li>
+                    <li><Link to="/create-listing" className="nav-link" onClick={(e) => handleLinkClick(e, "/create-listing")}>Grow</Link></li>
+                    <li><Link to="/my-listings" className="nav-link" onClick={(e) => handleLinkClick(e, "/my-listings")}>My Listings</Link></li>
                 </ul>
 
                 <div className="nav-actions">
@@ -199,14 +208,14 @@ const Navbar = () => {
 
             <div className={`nav-mobile ${menuOpen ? "nav-mobile--open" : ""}`}>
                 <div className="nav-mobile-inner">
-                    <Link to="/marketplace" className="nav-mobile-link" onClick={closeMenu}>Market Place</Link>
-                    <Link to="/create-listing" className="nav-mobile-link" onClick={closeMenu}>Grow</Link>
-                    <Link to="/my-listings" className="nav-mobile-link" onClick={closeMenu}>My Listings</Link>
+                    <Link to="/marketplace" className="nav-mobile-link" onClick={(e) => handleLinkClick(e, "/marketplace")}>Market Place</Link>
+                    <Link to="/create-listing" className="nav-mobile-link" onClick={(e) => handleLinkClick(e, "/create-listing")}>Grow</Link>
+                    <Link to="/my-listings" className="nav-mobile-link" onClick={(e) => handleLinkClick(e, "/my-listings")}>My Listings</Link>
 
                     {!user && (
                         <>
-                            <Link to="/login" className="nav-mobile-link" onClick={closeMenu}>Login</Link>
-                            <Link to="/register" className="nav-mobile-link nav-mobile-cta" onClick={closeMenu}>
+                            <Link to="/login" className="nav-mobile-link" onClick={(e) => handleLinkClick(e, "/login")}>Login</Link>
+                            <Link to="/register" className="nav-mobile-link nav-mobile-cta" onClick={(e) => handleLinkClick(e, "/register")}>
                                 Get started
                             </Link>
                         </>

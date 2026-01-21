@@ -357,3 +357,23 @@
         height: 210px;
     }
 }
+
+.listing-countdown {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.35rem 0.6rem;
+    border-radius: 99px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.listing-countdown.expired {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}

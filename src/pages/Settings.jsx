@@ -149,7 +149,7 @@ const Settings = () => {
                                 name="bio"
                                 value={formData.bio}
                                 onChange={handleChange}
-                                placeholder="Tell us about yourself"
+                                placeholder="Briefly describe your interests, campus involvement, or what you're selling/looking for."
                                 rows="3"
                             />
                         </div>
@@ -162,7 +162,7 @@ const Settings = () => {
                                 name="full_name"
                                 value={formData.full_name}
                                 onChange={handleChange}
-                                placeholder="Enter your full name"
+                                placeholder="Full name as it should appear on your profile"
                             />
                         </div>
 
@@ -174,7 +174,7 @@ const Settings = () => {
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
-                                placeholder="Enter your phone number"
+                                placeholder="Primary mobile number for coordination"
                             />
                         </div>
 
@@ -185,7 +185,7 @@ const Settings = () => {
                                 name="address"
                                 value={formData.address}
                                 onChange={handleChange}
-                                placeholder="Enter your address"
+                                placeholder="Campus address, dormitory, or department office"
                                 rows="3"
                             />
                         </div>
@@ -202,7 +202,7 @@ const Settings = () => {
                                 name="campus"
                                 value={formData.campus}
                                 onChange={handleChange}
-                                placeholder="Enter your campus name"
+                                placeholder="e.g. Main Campus, North Campus, Medical College"
                             />
                         </div>
 
@@ -214,7 +214,7 @@ const Settings = () => {
                                 name="student_id"
                                 value={formData.student_id}
                                 onChange={handleChange}
-                                placeholder="Enter your student ID"
+                                placeholder="For university verification purposes"
                             />
                         </div>
                     </div>

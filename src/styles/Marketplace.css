@@ -376,9 +376,10 @@
     width: 100%;
     height: 360px;
     /* big like screenshot */
-    object-fit: cover;
+    object-fit: contain;
     display: block;
-    background: var(--mp-soft);
+    background: #ffffff;
+    /* Clean white background for product images */
 }
 
 .mp-noimg {

@@ -57,7 +57,7 @@ const Login = () => {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="your.email@university.edu"
+                            placeholder="yourname@university.edu (Student verification required)"
                             required
                         />
                     </div>
@@ -69,7 +69,7 @@ const Login = () => {
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
+                            placeholder="Enter your account password"
                             required
                         />
                     </div>
@@ -80,6 +80,7 @@ const Login = () => {
                 </form>
 
                 <p className="auth-footer">
+                    <Link to="/forgot-password" style={{ display: 'block', marginBottom: '10px' }}>Forgot Password?</Link>
                     Don't have an account? <Link to="/register">Sign up here</Link>
                 </p>
             </div>
