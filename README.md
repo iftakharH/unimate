@@ -154,7 +154,15 @@ Always enable Row Level Security in production
 
 Keep Supabase keys private and rotate them if exposed
 
-Resources
+## Documentation
+
+**[STYLES_DOCUMENTATION.md](./STYLES_DOCUMENTATION.md)** – Comprehensive styling architecture guide
+
+**[STYLES_QUICK_REFERENCE.md](./docs/STYLES_QUICK_REFERENCE.md)** – Quick reference for common styling patterns
+
+**[FOLDER_STRUCTURE.md](./FOLDER_STRUCTURE.md)** – Project folder structure explanation
+
+## Resources
 
 React Documentation
 
