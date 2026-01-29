@@ -688,6 +688,7 @@ As the project grows:
 
 ## 📚 Related Documentation
 
+- [STYLES_QUICK_REFERENCE.md](./docs/STYLES_QUICK_REFERENCE.md) - Quick reference for common patterns
 - [FOLDER_STRUCTURE.md](./FOLDER_STRUCTURE.md) - Overall project structure
 - [README.md](./README.md) - Project setup and overview
 
