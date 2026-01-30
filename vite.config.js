@@ -5,6 +5,20 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    chunkSizeWarningLimit: 2000,
+    // Remove chunkSizeWarningLimit (it only changes warning threshold).
+    // Use manualChunks to split vendors into smaller bundles so minification
+    // & bundling use less memory and chunks stay under limits.
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'vendor.react'
+            if (id.includes('lodash')) return 'vendor.lodash'
+            // group other large libs into a vendor chunk
+            return 'vendor'
+          }
+        },
+      },
+    },
   },
 })
