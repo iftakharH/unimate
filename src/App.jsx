@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import AppRoutes from './routes/AppRoutes';
 import { testConnection } from './supabaseClient';
 import './App.css';
@@ -13,6 +14,7 @@ function App() {
   return (
     <div className="App">
       <AppRoutes />
+      <SpeedInsights />
     </div>
   );
 }
