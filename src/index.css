@@ -2,8 +2,8 @@
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Outfit', 'Inter', system-ui, sans-serif;
 
-  --text-main: #111827;
-  --text-muted: #4b5563;
+  --text-main: #2d2d2d;
+  --text-muted: #6b7280;
   --text-light: #9ca3af;
 }
 
@@ -19,7 +19,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
   color: var(--text-main);
-  background-color: #ffffff;
+  background-color: #fafafa;
   letter-spacing: -0.01em;
 }
 
@@ -33,7 +33,7 @@ h6 {
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.03em;
-  color: #000;
+  color: #2d2d2d;
 }
 
 button,
@@ -44,5 +44,7 @@ textarea {
 }
 
 code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
 }

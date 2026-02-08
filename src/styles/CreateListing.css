@@ -4,564 +4,575 @@
 ========================================= */
 
 :root {
-    --bg: #f6f7fb;
-    --surface: #ffffff;
-    --border: #e7e9f0;
-    --border2: #dfe3ee;
-    --text: #0f172a;
-    --muted: #667085;
-    --muted2: #98a2b3;
+  --bg: #faf5ff;
+  --surface: #ffffff;
+  --border: #e9d5ff;
+  --border2: #ddd6fe;
+  --text: #2d2d2d;
+  --muted: #6b7280;
+  --muted2: #9ca3af;
 
-    --gold: #e3b23c;
-    --goldHover: #d6a633;
-    --goldRing: rgba(227, 178, 60, .18);
+  --gold: #9b87f5;
+  --goldHover: #7c3aed;
+  --goldRing: rgba(155, 135, 245, 0.18);
 
-    --shadow: 0 14px 35px rgba(15, 23, 42, 0.10);
-    --shadowSoft: 0 10px 22px rgba(15, 23, 42, 0.07);
+  --shadow: 0 14px 35px rgba(155, 135, 245, 0.12);
+  --shadowSoft: 0 10px 22px rgba(155, 135, 245, 0.09);
 }
 
 .cl-dragging {
-    position: relative;
+  position: relative;
 }
 
 .cl-dragging::after {
-    content: "Drop images here to upload";
-    position: fixed;
-    inset: 0;
-    background: rgba(90, 165, 160, 0.9);
-    z-index: 9999;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 800;
-    backdrop-filter: blur(4px);
+  content: 'Drop images here to upload';
+  position: fixed;
+  inset: 0;
+  background: rgba(155, 135, 245, 0.95);
+  z-index: 9999;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  backdrop-filter: blur(4px);
 }
 
 /* Page */
 .cl-page {
-    min-height: calc(100vh - 80px);
-    background: var(--bg);
-    padding: 28px 16px 40px;
-    display: flex;
-    justify-content: center;
+  min-height: calc(100vh - 80px);
+  background: var(--bg);
+  padding: 28px 16px 40px;
+  display: flex;
+  justify-content: center;
 }
 
 .cl-grid {
-    width: 100%;
-    max-width: 980px;
+  width: 100%;
+  max-width: 980px;
 }
 
 /* Header */
 .cl-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .cl-title {
-    margin: 0;
-    font-size: 34px;
-    font-weight: 950;
-    color: var(--text);
-    letter-spacing: -.5px;
+  margin: 0;
+  font-size: 34px;
+  font-weight: 950;
+  color: var(--text);
+  letter-spacing: -0.5px;
 }
 
 .cl-subtitle {
-    margin: 10px 0 10px;
-    font-size: 14px;
-    color: var(--muted);
+  margin: 10px 0 10px;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 /* Progress bar */
 .cl-progress {
-    width: 320px;
-    max-width: 72vw;
-    height: 10px;
-    background: #eef1f7;
-    border-radius: 999px;
-    overflow: hidden;
-    border: 1px solid #e9edf6;
+  width: 320px;
+  max-width: 72vw;
+  height: 10px;
+  background: #eef1f7;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e9edf6;
 }
 
 .cl-progressBar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--gold), #f0d07b);
-    border-radius: 999px;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), #c4b5fd);
+  border-radius: 999px;
 }
 
 /* Badges */
 .cl-badges {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .cl-badge {
-    background: #fff;
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 900;
-    box-shadow: 0 10px 20px rgba(15, 23, 42, .06);
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
 }
 
 .cl-badge--accent {
-    background: var(--gold);
-    border-color: var(--gold);
-    color: #fff;
-    box-shadow: 0 14px 28px rgba(227, 178, 60, .22);
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(227, 178, 60, 0.22);
 }
 
 /* Alert */
 .cl-alert {
-    background: #fff7e6;
-    border: 1px solid #ffe3a1;
-    color: #7a4f00;
-    border-radius: 14px;
-    padding: 12px 14px;
-    font-size: 13px;
-    font-weight: 900;
-    margin-bottom: 14px;
+  background: #fff7e6;
+  border: 1px solid #ffe3a1;
+  color: #7a4f00;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  margin-bottom: 14px;
 }
 
 /* Card */
 .cl-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: var(--shadowSoft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: var(--shadowSoft);
 }
 
 .cl-cardTitle {
-    margin: 0 0 6px;
-    font-size: 18px;
-    font-weight: 950;
-    color: var(--text);
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 950;
+  color: var(--text);
 }
 
 .cl-cardHint {
-    margin: 0 0 14px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.55;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 /* Fields */
 .cl-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .cl-label {
-    font-size: 12px;
-    font-weight: 950;
-    text-transform: uppercase;
-    letter-spacing: .2px;
-    color: var(--text);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  color: var(--text);
 }
 
 .cl-label--inline {
-    text-transform: none;
-    letter-spacing: 0;
-    font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
 }
 
 .cl-input {
-    border: 1px solid var(--border2);
-    border-radius: 14px;
-    padding: 12px;
-    font-size: 14px;
-    color: var(--text);
-    background: #fff;
-    transition: border-color .15s ease, box-shadow .15s ease;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 14px;
+  color: var(--text);
+  background: #fff;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .cl-input::placeholder {
-    color: var(--muted2);
+  color: var(--muted2);
 }
 
 .cl-input:focus {
-    outline: none;
-    border-color: var(--gold);
-    box-shadow: 0 0 0 4px var(--goldRing);
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px var(--goldRing);
 }
 
 .cl-textarea {
-    resize: vertical;
+  resize: vertical;
 }
 
 /* Validation */
 .cl-input.is-invalid {
-    border-color: #ef4444;
+  border-color: #ef4444;
 }
 
 .cl-input.is-invalid:focus {
-    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
 }
 
 .cl-error-text {
-    color: #ef4444;
-    font-size: 11px;
-    font-weight: 800;
-    margin-top: -4px;
-    margin-bottom: 8px;
-    display: block;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: -4px;
+  margin-bottom: 8px;
+  display: block;
 }
 
 /* Rows */
 .cl-row {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
 }
 
 .cl-field--ghost {
-    visibility: hidden;
+  visibility: hidden;
 }
 
 /* Checkbox */
 .cl-check {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    border-radius: 14px;
-    border: 1px solid var(--border2);
-    background: #fbfcff;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border2);
+  background: #fbfcff;
 }
 
-.cl-check input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--gold);
+.cl-check input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
 }
 
 /* Divider & section */
 .cl-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 16px 0;
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
 }
 
 .cl-sectionTitle {
-    margin: 0 0 10px;
-    font-size: 14px;
-    font-weight: 950;
-    color: var(--text);
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 950;
+  color: var(--text);
 }
 
 .cl-subsectionTitle {
-    margin: 12px 0 10px;
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+  margin: 12px 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 /* Buttons */
 .cl-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .cl-actions--media {
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
 .cl-btn {
-    border-radius: 14px;
-    padding: 12px 16px;
-    font-weight: 950;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: transform .06s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 950;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .cl-btn:active {
-    transform: translateY(1px);
+  transform: translateY(1px);
 }
 
 .cl-btn--primary {
-    background: var(--gold);
-    color: #fff;
-    box-shadow: 0 16px 28px rgba(227, 178, 60, .22);
+  background: var(--gold);
+  color: #fff;
+  box-shadow: 0 16px 28px rgba(227, 178, 60, 0.22);
 }
 
 .cl-btn--primary:hover {
-    background: var(--goldHover);
+  background: var(--goldHover);
 }
 
 .cl-btn--primary:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-    box-shadow: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .cl-btn--soft {
-    background: #fff;
-    border-color: var(--border);
-    color: var(--text);
-    box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
 }
 
 .cl-btn--soft:hover {
-    background: #fafafa;
+  background: #fafafa;
 }
 
 /* Link button */
 .cl-link {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-weight: 950;
-    font-size: 13px;
-    color: var(--text);
-    opacity: .85;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 950;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.85;
 }
 
 .cl-link:hover {
-    opacity: 1;
-    text-decoration: underline;
+  opacity: 1;
+  text-decoration: underline;
 }
 
 /* Dropzone */
 .cl-dropzone {
-    border: 2px dashed var(--border2);
-    border-radius: 18px;
-    padding: 20px 16px;
-    background: #fbfcff;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .15s ease, box-shadow .15s ease, transform .06s ease;
-    user-select: none;
+  border: 2px dashed var(--border2);
+  border-radius: 18px;
+  padding: 20px 16px;
+  background: #fbfcff;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.06s ease;
+  user-select: none;
 }
 
 .cl-dropzone:hover,
 .cl-dropzone:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 4px var(--goldRing);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px var(--goldRing);
 }
 
 .cl-dropzone:active {
-    transform: translateY(1px);
+  transform: translateY(1px);
 }
 
 .cl-dropzoneIcon {
-    font-size: 22px;
-    margin-bottom: 6px;
+  font-size: 22px;
+  margin-bottom: 6px;
 }
 
 .cl-dropzoneTitle {
-    font-weight: 1000;
-    color: var(--text);
-    font-size: 16px;
+  font-weight: 1000;
+  color: var(--text);
+  font-size: 16px;
 }
 
 .cl-dropzoneMeta {
-    margin-top: 6px;
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.4;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 /* Media grid */
 .cl-mediaGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
-    gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 12px;
 }
 
 .cl-mediaTile {
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    background: #fff;
-    box-shadow: 0 12px 22px rgba(15, 23, 42, .08);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.08);
 }
 
 .cl-mediaImg {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
 }
 
 .cl-mediaBar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 900;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 900;
 }
 
 .cl-mediaTag {
-    padding: 4px 9px;
-    border-radius: 999px;
-    background: rgba(227, 178, 60, .15);
-    color: #7a4f00;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(227, 178, 60, 0.15);
+  color: #7a4f00;
 }
 
 /* Video list */
 .cl-fileList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .cl-fileRow {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
-    margin-bottom: 10px;
-    font-size: 13px;
-    font-weight: 950;
-    color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 950;
+  color: var(--text);
 }
 
 .cl-fileName {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
 }
 
 /* Review box */
 .cl-reviewBox {
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
-    padding: 14px;
-    display: grid;
-    gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
 }
 
-.cl-reviewBox>div {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px dashed var(--border);
+.cl-reviewBox > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
 }
 
-.cl-reviewBox>div:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+.cl-reviewBox > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 /* Bottom nav (always aligned nicely) */
 .cl-nav {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 18px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
 /* Responsive */
 @media (max-width: 900px) {
-    .cl-topbar {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+  .cl-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-    .cl-progress {
-        width: 100%;
-    }
+  .cl-progress {
+    width: 100%;
+  }
 }
 
 @media (max-width: 820px) {
-    .cl-row {
-        grid-template-columns: 1fr;
-    }
+  .cl-row {
+    grid-template-columns: 1fr;
+  }
 
-    .cl-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
+  .cl-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-    .cl-btn {
-        width: 100%;
-    }
+  .cl-btn {
+    width: 100%;
+  }
 
-    .cl-nav {
-        flex-direction: column;
-    }
+  .cl-nav {
+    flex-direction: column;
+  }
 }
 
 /* Optional Attributes Collapsible */
 .cl-optionalToggle {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 14px 18px;
-    background: #f8fafc;
-    border: 1px solid var(--border2);
-    border-radius: 14px;
-    cursor: pointer;
-    font-weight: 900;
-    color: var(--text);
-    margin: 16px 0;
-    transition: background 0.2s, border-color 0.2s;
-    text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
+  color: var(--text);
+  margin: 16px 0;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+  text-align: left;
 }
 
 .cl-optionalToggle:hover {
-    background: #f1f5f9;
-    border-color: var(--gold);
+  background: #f1f5f9;
+  border-color: var(--gold);
 }
 
 .cl-toggleIcon {
-    font-size: 10px;
-    transition: transform 0.3s ease;
-    color: var(--muted);
+  font-size: 10px;
+  transition: transform 0.3s ease;
+  color: var(--muted);
 }
 
 .cl-toggleIcon.is-open {
-    transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 .cl-optionalContent {
-    background: #ffffff;
-    border: 1px solid var(--border2);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 24px;
-    animation: cl-slideDown 0.3s ease-out;
+  background: #ffffff;
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  animation: cl-slideDown 0.3s ease-out;
 }
 
 @keyframes cl-slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
