@@ -1,56 +1,464 @@
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import '../styles/Profile.css';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../supabaseClient";
+import Modal from "../components/Modal";
+import "../styles/Profile.css";
+
+// ✅ Professional icons (Font Awesome - solid)
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faStore,
+    faHandshake,
+    faEnvelope,
+    faHeart,
+    faPlus,
+    faUserPen,
+    faShieldHalved,
+    faRightFromBracket
+} from "@fortawesome/free-solid-svg-icons";
 
 const Profile = () => {
     const { user, signOut } = useAuth();
     const navigate = useNavigate();
 
-    const handleLogout = async () => {
+    const [loading, setLoading] = useState(true);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [isEditingBio, setIsEditingBio] = useState(false);
+    const [bioText, setBioText] = useState("");
+
+    const [unreadMsgs, setUnreadMsgs] = useState(0);
+    const [salesCount, setSalesCount] = useState(0);
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
+
+    const displayName = useMemo(() => {
+        const meta = user?.user_metadata || {};
+        return (
+            meta.full_name ||
+            meta.name ||
+            (user?.email ? user.email.split("@")[0] : "User")
+        );
+    }, [user]);
+
+    const joinedDate = useMemo(() => {
         try {
-            await signOut();
-            navigate('/');
+            return user?.created_at ? new Date(user.created_at).toLocaleDateString() : "";
+        } catch {
+            return "";
+        }
+    }, [user]);
+
+    const avatarLetter = useMemo(() => {
+        const base = (displayName || user?.email || "U").trim();
+        return base.charAt(0).toUpperCase();
+    }, [displayName, user]);
+
+    useEffect(() => {
+        if (user?.user_metadata?.bio) {
+            setBioText(user.user_metadata.bio);
+        }
+    }, [user]);
+
+    const handleLogout = () => {
+        setModal({
+            isOpen: true,
+            title: "Confirm Sign Out",
+            message: "Are you sure you want to sign out of your account?",
+            type: "info",
+            confirmText: "Sign Out",
+            onConfirm: async () => {
+                try {
+                    await signOut();
+                    navigate("/");
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                }
+            },
+            onClose: () => setModal({ ...modal, isOpen: false })
+        });
+    };
+
+    const handleAvatarClick = () => {
+        document.getElementById("direct-avatar-input").click();
+    };
+
+    const handleAvatarChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !user) return;
+
+        try {
+            setUploadingAvatar(true);
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            // Update Auth Metadata
+            const { error: authError } = await supabase.auth.updateUser({
+                data: { ...user.user_metadata, avatar_url: publicUrl }
+            });
+            if (authError) throw authError;
+
+            // Sync to Profiles
+            await supabase.from("profiles").upsert({
+                id: user.id,
+                avatar_url: publicUrl,
+                updated_at: new Date()
+            });
+
+            window.location.reload();
         } catch (error) {
-            console.error("Error signing out:", error);
+            console.error("Error uploading avatar:", error);
+            setModal({
+                isOpen: true,
+                title: "Upload Error",
+                message: "Failed to upload avatar: " + error.message,
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
+        } finally {
+            setUploadingAvatar(false);
         }
     };
 
-    if (!user) return null; // Protected route handles redirect, but good safety
+    const handleBioSave = async () => {
+        if (!user) return;
+        try {
+            setLoading(true);
+            const { error: authError } = await supabase.auth.updateUser({
+                data: { ...user.user_metadata, bio: bioText.trim() }
+            });
+            if (authError) throw authError;
+
+            // Sync to Profiles
+            await supabase.from("profiles").upsert({
+                id: user.id,
+                bio: bioText.trim(),
+                updated_at: new Date()
+            });
+
+            setIsEditingBio(false);
+            window.location.reload();
+        } catch (error) {
+            console.error("Error saving bio:", error);
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Failed to save bio. Please try again.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const fetchCounts = async () => {
+            if (!user) return;
+            setLoading(true);
+
+            // NOTE: If your table/columns are different, rename them here.
+            try {
+                const { count } = await supabase
+                    .from("messages")
+                    .select("*", { count: "exact", head: true })
+                    .eq("recipient_id", user.id)
+                    .eq("is_read", false);
+                setUnreadMsgs(count || 0);
+            } catch {
+                setUnreadMsgs(0);
+            }
+
+            try {
+                const { count } = await supabase
+                    .from("listings")
+                    .select("*", { count: "exact", head: true })
+                    .eq("seller_id", user.id);
+                setListingCount(count || 0);
+            } catch {
+                setListingCount(0);
+            }
+
+            try {
+                const { count } = await supabase
+                    .from("deals")
+                    .select("*", { count: "exact", head: true })
+                    .eq("buyer_id", user.id);
+                setPurchaseCount(count || 0);
+            } catch {
+                setPurchaseCount(0);
+            }
+
+            try {
+                const { count } = await supabase
+                    .from("deals")
+                    .select("*", { count: "exact", head: true })
+                    .eq("seller_id", user.id);
+                setSalesCount(count || 0);
+            } catch {
+                setSalesCount(0);
+            }
+
+            setLoading(false);
+        };
+
+        fetchCounts();
+    }, [user]);
+
+    if (!user) return null;
+
+    // Optional fields if you store them in user_metadata
+    const meta = user.user_metadata || {};
+    const phone = meta.phone || "Not added";
+    const address = meta.address || "Not added";
+    const campus = meta.campus || "Not added";
+    const studentId = meta.student_id || "Not added";
 
     return (
-        <div className="profile-container">
-            <div className="profile-header">
-                <div className="profile-avatar">
-                    {user.email.charAt(0).toUpperCase()}
+        <div className="profile-wrap">
+            <div className="profile-shell">
+                {/* Header / Hero */}
+                <section className="pro-card pro-hero">
+                    <div className="pro-hero__left">
+                        <div
+                            className={`pro-avatar ${uploadingAvatar ? 'uploading' : ''}`}
+                            onClick={handleAvatarClick}
+                            title="Click to change photo"
+                        >
+                            {meta.avatar_url ? (
+                                <img src={meta.avatar_url} alt="" className="pro-avatar-img" />
+                            ) : (
+                                avatarLetter
+                            )}
+                            <div className="pro-avatar-overlay">
+                                <span>{uploadingAvatar ? "..." : "Edit"}</span>
+                            </div>
+                        </div>
+                        <input
+                            type="file"
+                            id="direct-avatar-input"
+                            style={{ display: 'none' }}
+                            accept="image/*"
+                            onChange={handleAvatarChange}
+                        />
+
+                        <div className="pro-identity">
+                            <div className="pro-name-row">
+                                <h1 className="pro-name">{displayName}</h1>
+
+                                {unreadMsgs > 0 ? (
+                                    <span className="pro-pill pro-pill--warn">
+                                        {unreadMsgs} new message{unreadMsgs === 1 ? "" : "s"}
+                                    </span>
+                                ) : (
+                                    <span className="pro-pill">Unimate</span>
+                                )}
+                            </div>
+
+                            <p className="pro-email">{user.email}</p>
+
+                            {isEditingBio ? (
+                                <div className="pro-bio-edit-wrap">
+                                    <textarea
+                                        className="pro-bio-textarea"
+                                        value={bioText}
+                                        onChange={(e) => setBioText(e.target.value)}
+                                        placeholder="Add a bio..."
+                                        maxLength={150}
+                                    />
+                                    <div className="pro-bio-edit-actions">
+                                        <button className="pro-bio-btn pro-bio-btn--save" onClick={handleBioSave}>Save</button>
+                                        <button className="pro-bio-btn" onClick={() => setIsEditingBio(false)}>Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="pro-bio-display-wrap" onClick={() => setIsEditingBio(true)} title="Click to edit bio">
+                                    <p className="pro-bio-text">{meta.bio || "Add a bio..."}</p>
+                                </div>
+                            )}
+
+                            <p className="pro-meta">
+                                Joined <span className="pro-dot">•</span> {joinedDate}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pro-hero__right">
+                        {/* <button
+                            className="pro-btn pro-btn--primary"
+                            onClick={() => navigate("/messages")}
+                        >
+                            <FontAwesomeIcon icon={faEnvelope} />
+                            Inbox
+                            <span className="pro-btn-badge">{unreadMsgs}</span>
+                        </button> */}
+
+                        <button
+                            className="pro-btn pro-btn--ghost"
+                            onClick={() => navigate("/create-listing")}
+                        >
+                            <FontAwesomeIcon icon={faPlus} />
+                            Create Listing
+                        </button>
+                    </div>
+                </section>
+
+                {/* Stats */}
+                {/* <section className="pro-stats">
+                    <button className="pro-stat" onClick={() => navigate("/messages")}>
+                        <span className="pro-stat__label">Unread</span>
+                        <span className="pro-stat__value">{loading ? "—" : unreadMsgs}</span>
+                        <span className="pro-stat__hint">Messages</span>
+                    </button>
+
+                    <button className="pro-stat" onClick={() => navigate("/my-listings")}>
+                        <span className="pro-stat__label">Listings</span>
+                        <span className="pro-stat__value">{loading ? "—" : listingCount}</span>
+                        <span className="pro-stat__hint">Your items</span>
+                    </button>
+
+                    <button className="pro-stat" onClick={() => navigate("/my-deals")}>
+                        <span className="pro-stat__label">Purchases</span>
+                        <span className="pro-stat__value">{loading ? "—" : purchaseCount}</span>
+                        <span className="pro-stat__hint">Orders</span>
+                    </button>
+
+                    <button className="pro-stat" onClick={() => navigate("/my-deals")}>
+                        <span className="pro-stat__label">Sales</span>
+                        <span className="pro-stat__value">{loading ? "—" : salesCount}</span>
+                        <span className="pro-stat__hint">Completed</span>
+                    </button>
+                </section> */}
+
+                {/* Main Grid */}
+                <div className="pro-grid">
+                    {/* Quick actions */}
+                    <section className="pro-card">
+                        <div className="pro-card__head">
+                            <h2 className="pro-card__title">Quick actions</h2>
+                            <p className="pro-card__sub">Manage your marketplace activity</p>
+                        </div>
+
+                        <div className="pro-actions">
+                            <button className="pro-action" onClick={() => navigate("/my-listings")}>
+                                <div className="pro-action__text">
+                                    <div className="pro-action__title">My Listings</div>
+                                    <div className="pro-action__sub">Edit, delete, boost items</div>
+                                </div>
+                                <div className="pro-action__chev">›</div>
+                            </button>
+
+                            <button className="pro-action" onClick={() => navigate("/my-deals")}>
+                                <div className="pro-action__text">
+                                    <div className="pro-action__title">My Deals</div>
+                                    <div className="pro-action__sub">Purchases & sales history</div>
+                                </div>
+                                <div className="pro-action__chev">›</div>
+                            </button>
+                            {/* 
+                            <button className="pro-action" onClick={() => navigate("/messages")}>
+                                <div className="pro-action__text">
+                                    <div className="pro-action__title">Messages</div>
+                                    <div className="pro-action__sub">
+                                        Unread: <strong>{loading ? "_" : unreadMsgs}</strong>
+                                    </div>
+                                </div>
+                                <div className="pro-action__chev">›</div>
+                            </button> */}
+
+                            <button className="pro-action" onClick={() => navigate("/saved")}>
+                                <div className="pro-action__text">
+                                    <div className="pro-action__title">Saved Items</div>
+                                    <div className="pro-action__sub">Wishlist & bookmarks</div>
+                                </div>
+                                <div className="pro-action__chev">›</div>
+                            </button>
+                        </div>
+
+                    </section>
+
+                    {/* Account details */}
+                    <section className="pro-card">
+                        <div className="pro-card__head">
+                            <h2 className="pro-card__title">Account details</h2>
+                            <p className="pro-card__sub">Your identity, delivery, and security basics</p>
+                        </div>
+
+                        <div className="pro-kv">
+                            <div className="pro-kv__row">
+                                <span className="pro-kv__k">Full name</span>
+                                <span className="pro-kv__v">{displayName}</span>
+                            </div>
+                            <div className="pro-kv__row">
+                                <span className="pro-kv__k">Email</span>
+                                <span className="pro-kv__v">{user.email}</span>
+                            </div>
+                            <div className="pro-kv__row">
+                                <span className="pro-kv__k">Phone</span>
+                                <span className="pro-kv__v">{phone}</span>
+                            </div>
+                            <div className="pro-kv__row">
+                                <span className="pro-kv__k">Address</span>
+                                <span className="pro-kv__v">{address}</span>
+                            </div>
+                            <div className="pro-kv__row">
+                                <span className="pro-kv__k">Campus</span>
+                                <span className="pro-kv__v">{campus}</span>
+                            </div>
+                            <div className="pro-kv__row">
+                                <span className="pro-kv__k">Student ID</span>
+                                <span className="pro-kv__v">{studentId}</span>
+                            </div>
+                        </div>
+
+                        <div className="pro-inline-actions">
+                            <button className="pro-btn pro-btn--soft" onClick={() => navigate("/settings")}>
+                                <FontAwesomeIcon icon={faUserPen} />
+                                Edit profile
+                            </button>
+
+                            <button className="pro-btn pro-btn--soft" onClick={() => navigate("/security")}>
+                                <FontAwesomeIcon icon={faShieldHalved} />
+                                Security
+                            </button>
+                        </div>
+                    </section>
                 </div>
-                <h1 className="profile-name">Student</h1>
-                <p className="profile-email">{user.email}</p>
-                <p className="profile-joined">Joined: {new Date(user.created_at).toLocaleDateString()}</p>
+
+                {/* Footer */}
+                <section className="pro-footer">
+                    <button className="pro-btn pro-btn--danger" onClick={handleLogout}>
+                        <FontAwesomeIcon icon={faRightFromBracket} />
+                        Sign out
+                    </button>
+                </section>
             </div>
 
-            <div className="profile-actions">
-                <button
-                    className="action-card"
-                    onClick={() => navigate('/my-listings')}
-                >
-                    <h3>📝 My Listings</h3>
-                    <p>Manage items you are selling</p>
-                </button>
-
-                <button
-                    className="action-card"
-                    onClick={() => navigate('/my-deals')}
-                >
-                    <h3>🤝 My Deals</h3>
-                    <p>View your purchases and sales</p>
-                </button>
-            </div>
-
-            <div className="profile-footer">
-                <button className="btn-logout-danger" onClick={handleLogout}>
-                    Sign Out
-                </button>
-            </div>
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };

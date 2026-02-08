@@ -1,43 +1,62 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
-import { useAuth } from '../context/AuthContext';
-import { chatService } from '../services/chatService';
-import ProductModal from '../components/ProductModal';
-import '../styles/Marketplace.css';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthContext";
+import { chatService } from "../services/chatService";
+import Modal from "../components/Modal";
+import "../styles/Marketplace.css";
+
+const PLACEHOLDER_IMG =
+    "https://via.placeholder.com/400x300/f7f8f9/636e72?text=No+Image";
 
 const Marketplace = () => {
     const [listings, setListings] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedListing, setSelectedListing] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filtersOpen, setFiltersOpen] = useState(true);
+    const [sort, setSort] = useState("rating");
+
+    const [inStock, setInStock] = useState(false);
+    const [outOfStock, setOutOfStock] = useState(false);
+
+    const [selectedTypes, setSelectedTypes] = useState(new Set());
+    const [selectedColors, setSelectedColors] = useState(new Set());
+    const [selectedMaterials, setSelectedMaterials] = useState(new Set());
+    const [selectedSizes, setSelectedSizes] = useState(new Set());
+
+    // Modal state
+    const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info", onConfirm: null });
+
     const { user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchListings();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    // Filter listings based on search query
-    const filteredListings = listings.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     const fetchListings = async () => {
         try {
             setLoading(true);
+
+            // ✅ professional fetch: include categories + images
             const { data, error } = await supabase
-                .from('listings')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .from("listings")
+                .select(`
+                    *,
+                    categories ( id, name, slug ),
+                    listing_images ( image_url, is_primary, sort_order )
+                `)
+                .eq("status", "active")
+                .order("created_at", { ascending: false });
 
             if (error) throw error;
             setListings(data || []);
         } catch (err) {
-            console.error('Error fetching listings:', err);
-            setError('Could not load listings. Please try again.');
+            console.error("Error fetching listings:", err);
+            setError("Could not load listings. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -45,23 +64,236 @@ const Marketplace = () => {
 
     const handleMessage = async (listing) => {
         if (!user) {
-            navigate('/login');
+            navigate("/login");
             return;
         }
 
         if (user.id === listing.seller_id) {
-            alert("You cannot chat with yourself!");
+            setModal({
+                isOpen: true,
+                title: "Information",
+                message: "You cannot chat with yourself!",
+                type: "info",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
             return;
         }
 
         try {
-            // Find existing chat or create new one
-            const chatId = await chatService.getOrCreateChat(listing.id, listing.seller_id, user.id);
+            const chatId = await chatService.getOrCreateChat(
+                listing.id,
+                listing.seller_id,
+                user.id
+            );
             navigate(`/chat/${chatId}`);
         } catch (error) {
-            console.error('Error starting chat:', error);
-            alert('Could not start chat. Please try again.');
+            console.error("Error starting chat:", error);
+            setModal({
+                isOpen: true,
+                title: "Error",
+                message: "Could not start chat. Please try again later.",
+                type: "danger",
+                confirmText: "Close",
+                onConfirm: () => setModal({ ...modal, isOpen: false }),
+                onClose: () => setModal({ ...modal, isOpen: false })
+            });
         }
+    };
+
+    // ✅ image helper (primary -> any -> legacy image_url -> placeholder)
+    const getPrimaryImage = (item) => {
+        const imgs = Array.isArray(item.listing_images) ? item.listing_images : [];
+        const primary = imgs.find((x) => x?.is_primary) || imgs[0];
+        return primary?.image_url || item.image_url || PLACEHOLDER_IMG;
+    };
+
+    // ✅ Helpers now read from professional schema
+    const getType = (item) =>
+        (item?.categories?.name || "").toString().trim();
+
+    const getAttr = (item, key) => {
+        const attrs = item?.attributes && typeof item.attributes === "object" ? item.attributes : {};
+        const v = attrs?.[key];
+        return (v ?? "").toString().trim();
+    };
+
+    const getColor = (item) => getAttr(item, "color");
+    const getMaterial = (item) => getAttr(item, "material");
+    const getSize = (item) => getAttr(item, "size");
+
+    const isItemInStock = (item) => {
+        if (typeof item.in_stock === "boolean") return item.in_stock;
+        if (typeof item.stock === "number") return item.stock > 0;
+        return true;
+    };
+
+    const filterOptions = useMemo(() => {
+        const typeCount = new Map();
+        const colorCount = new Map();
+        const materialCount = new Map();
+        const sizeCount = new Map();
+
+        let minPrice = Infinity;
+        let maxPrice = -Infinity;
+
+        let inCount = 0;
+        let outCount = 0;
+
+        listings.forEach((item) => {
+            const t = getType(item);
+            if (t) typeCount.set(t, (typeCount.get(t) || 0) + 1);
+
+            const c = getColor(item);
+            if (c) colorCount.set(c, (colorCount.get(c) || 0) + 1);
+
+            const m = getMaterial(item);
+            if (m) materialCount.set(m, (materialCount.get(m) || 0) + 1);
+
+            const s = getSize(item);
+            if (s) sizeCount.set(s, (sizeCount.get(s) || 0) + 1);
+
+            const price = Number(item.price || 0);
+            if (!Number.isNaN(price)) {
+                minPrice = Math.min(minPrice, price);
+                maxPrice = Math.max(maxPrice, price);
+            }
+
+            if (isItemInStock(item)) inCount += 1;
+            else outCount += 1;
+        });
+
+        if (minPrice === Infinity) minPrice = 0;
+        if (maxPrice === -Infinity) maxPrice = 0;
+
+        return {
+            typeCount,
+            colorCount,
+            materialCount,
+            sizeCount,
+            priceMin: minPrice,
+            priceMax: maxPrice,
+            inCount,
+            outCount,
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [listings]);
+
+    const [priceMin, setPriceMin] = useState(0);
+    const [priceMax, setPriceMax] = useState(0);
+
+    useEffect(() => {
+        setPriceMin(filterOptions.priceMin);
+        setPriceMax(filterOptions.priceMax);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterOptions.priceMin, filterOptions.priceMax]);
+
+    useEffect(() => {
+        const mq = window.matchMedia("(max-width: 900px)");
+
+        const apply = () => setFiltersOpen(!mq.matches);
+        apply();
+
+        mq.addEventListener?.("change", apply);
+        return () => mq.removeEventListener?.("change", apply);
+    }, []);
+
+    const toggleSetValue = (setState, value) => {
+        setState((prev) => {
+            const next = new Set(prev);
+            if (next.has(value)) next.delete(value);
+            else next.add(value);
+            return next;
+        });
+    };
+
+    const filteredListings = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+
+        let arr = listings.filter((item) => {
+            const title = (item.title || "").toLowerCase();
+            const desc = (item.description || "").toLowerCase();
+            const matchesSearch = !q || title.includes(q) || desc.includes(q);
+
+            const stockStatus = isItemInStock(item);
+            const matchesStock =
+                (!inStock && !outOfStock) ||
+                (inStock && stockStatus) ||
+                (outOfStock && !stockStatus);
+
+            const t = getType(item);
+            const matchesType =
+                selectedTypes.size === 0 || (t && selectedTypes.has(t));
+
+            const c = getColor(item);
+            const m = getMaterial(item);
+            const s = getSize(item);
+
+            const matchesColor =
+                selectedColors.size === 0 || (c && selectedColors.has(c));
+            const matchesMaterial =
+                selectedMaterials.size === 0 || (m && selectedMaterials.has(m));
+            const matchesSize =
+                selectedSizes.size === 0 || (s && selectedSizes.has(s));
+
+            const p = Number(item.price || 0);
+            const matchesPrice =
+                Number.isNaN(p) ? true : p >= priceMin && p <= priceMax;
+
+            // ✅ Expiry Check (30 days)
+            const created = new Date(item.created_at);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const isExpired = diffDays > 30;
+
+            return (
+                !isExpired &&
+                matchesSearch &&
+                matchesStock &&
+                matchesType &&
+                matchesColor &&
+                matchesMaterial &&
+                matchesSize &&
+                matchesPrice
+            );
+        });
+
+        if (sort === "price_low") arr.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        if (sort === "price_high") arr.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+        if (sort === "latest") arr.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+        if (sort === "rating") {
+            const hasRating = arr.some((x) => x.rating != null);
+            if (hasRating) arr.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+        }
+
+        return arr;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        listings,
+        searchQuery,
+        inStock,
+        outOfStock,
+        selectedTypes,
+        selectedColors,
+        selectedMaterials,
+        selectedSizes,
+        priceMin,
+        priceMax,
+        sort,
+    ]);
+
+    const clearAllFilters = () => {
+        setInStock(false);
+        setOutOfStock(false);
+        setSelectedTypes(new Set());
+        setSelectedColors(new Set());
+        setSelectedMaterials(new Set());
+        setSelectedSizes(new Set());
+        setPriceMin(filterOptions.priceMin);
+        setPriceMax(filterOptions.priceMax);
     };
 
     if (loading) {
@@ -81,70 +313,322 @@ const Marketplace = () => {
     }
 
     return (
-        <div className="marketplace-container">
-            <div className="marketplace-header">
-                <div>
-                    <h1 className="marketplace-title">Student Marketplace</h1>
-                    <p className="marketplace-subtitle">Latest items from your peers</p>
-                </div>
-                <input
-                    type="text"
-                    className="search-bar"
-                    placeholder="Search items..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
+        <div className="marketplace-container mp-page">
+            <section className="mp-hero-min">
+                <div className="mp-hero-min__inner">
+                    <div className="mp-hero-min__text">
+                        <h1 className="mp-hero-min__title">Market Place</h1>
+                        <p className="mp-hero-min__caption">
+                            Curated student listings - browse, filter, and message sellers instantly!
+                        </p>
+                    </div>
 
-            {filteredListings.length === 0 ? (
-                <div className="empty-state">
-                    <h3>No items found</h3>
-                    <p>Be the first to list something!</p>
+                    <div className="mp-hero-min__search">
+                        <input
+                            className="mp-searchbar"
+                            type="text"
+                            placeholder="Search products, categories, or brands..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
-            ) : (
-                <div className="items-grid">
-                    {filteredListings.map((item) => (
-                        <div key={item.id} className="item-card">
-                            <div
-                                className="item-image"
-                                style={{ backgroundImage: `url(${item.image_url})` }}
-                                role="img"
-                                aria-label={item.title}
-                            >
-                                {!item.image_url && '📷'}
+            </section>
+
+            <section className="mp-ad-min">
+                <div className="mp-ad-min__inner">
+                    <div className="mp-ad-min__left">
+                        <span className="mp-ad-min__tag">Featured</span>
+                        <h3>Boost your listing</h3>
+                        <p>Get more views and faster replies by featuring your product.</p>
+                    </div>
+                    <div className="mp-ad-min__right">
+                        <button className="mp-btn-min mp-btn-min--primary" type="button">
+                            Advertise Now
+                        </button>
+                        <button className="mp-btn-min" type="button">
+                            Learn More
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section className="mp-collection">
+                <div className="mp-collection__toolbar">
+                    <button
+                        type="button"
+                        className="mp-linkbtn"
+                        onClick={() => setFiltersOpen((v) => !v)}
+                    >
+                        <svg
+                            className="mp-filterbtn__icon"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M3 5h18l-7 8v5l-4 2v-7L3 5Z"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                        {filtersOpen ? "Hide Filter" : "Show Filter"}
+                    </button>
+
+                    <div className="mp-toolbar__spacer" />
+
+                    <div className="mp-sort">
+                        <span className="mp-sort__label">Sort by</span>
+                        <select
+                            className="mp-sort__select"
+                            value={sort}
+                            onChange={(e) => setSort(e.target.value)}
+                        >
+                            <option value="rating">Sort by average rating</option>
+                            <option value="latest">Sort by latest</option>
+                            <option value="price_low">Sort by price: low to high</option>
+                            <option value="price_high">Sort by price: high to low</option>
+                        </select>
+                    </div>
+
+                    <div className="mp-results">
+                        Showing <b>{filteredListings.length}</b> results
+                    </div>
+                </div>
+
+                <div className={`mp-collection__body ${filtersOpen ? "" : "no-filters"}`}>
+                    {filtersOpen && (
+                        <aside className="mp-filters">
+                            <div className="mp-filters__head">
+                                <h3>Filter</h3>
+                                <button className="mp-linkbtn" type="button" onClick={clearAllFilters}>
+                                    Clear all
+                                </button>
                             </div>
-                            <div className="item-details">
-                                <h3 className="item-title">{item.title}</h3>
-                                <p className="item-price">${item.price}</p>
-                                <div className="item-desc-preview">{item.description.substring(0, 60)}...</div>
-                                <div className="item-actions">
-                                    <button
-                                        className="btn-view"
-                                        onClick={() => setSelectedListing(item)}
-                                    >
-                                        Details
-                                    </button>
-                                    {user && user.id !== item.seller_id && (
-                                        <button
-                                            className="btn-message"
-                                            onClick={() => handleMessage(item)}
-                                        >
-                                            Message
-                                        </button>
-                                    )}
+
+                            <div className="mp-filterblock">
+                                <h4>Availability</h4>
+
+                                <label className="mp-checkrow">
+                                    <input
+                                        type="checkbox"
+                                        checked={inStock}
+                                        onChange={(e) => setInStock(e.target.checked)}
+                                    />
+                                    <span>In stock</span>
+                                    <span className="mp-count">{filterOptions.inCount}</span>
+                                </label>
+
+                                <label className="mp-checkrow">
+                                    <input
+                                        type="checkbox"
+                                        checked={outOfStock}
+                                        onChange={(e) => setOutOfStock(e.target.checked)}
+                                    />
+                                    <span>Out of stock</span>
+                                    <span className="mp-count">{filterOptions.outCount}</span>
+                                </label>
+                            </div>
+
+                            <div className="mp-filterblock">
+                                <h4>Product Type</h4>
+
+                                {filterOptions.typeCount.size === 0 ? (
+                                    <p className="mp-hint">No product types found in data.</p>
+                                ) : (
+                                    [...filterOptions.typeCount.entries()]
+                                        .sort((a, b) => b[1] - a[1])
+                                        .slice(0, 12)
+                                        .map(([t, count]) => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                className={`mp-optionrow ${selectedTypes.has(t) ? "is-active" : ""}`}
+                                                onClick={() => toggleSetValue(setSelectedTypes, t)}
+                                                title={t}
+                                            >
+                                                <span className="mp-optionrow__text">{t}</span>
+                                                <span className="mp-count">{count}</span>
+                                            </button>
+                                        ))
+                                )}
+                            </div>
+
+                            <div className="mp-filterblock">
+                                <h4>Price</h4>
+
+                                <div className="mp-range">
+                                    <input
+                                        type="range"
+                                        min={filterOptions.priceMin}
+                                        max={filterOptions.priceMax}
+                                        value={priceMin}
+                                        onChange={(e) => {
+                                            const v = Number(e.target.value);
+                                            setPriceMin(Math.min(v, priceMax));
+                                        }}
+                                    />
+                                    <input
+                                        type="range"
+                                        min={filterOptions.priceMin}
+                                        max={filterOptions.priceMax}
+                                        value={priceMax}
+                                        onChange={(e) => {
+                                            const v = Number(e.target.value);
+                                            setPriceMax(Math.max(v, priceMin));
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="mp-priceboxes">
+                                    <div className="mp-pricebox">
+                                        <label>Min</label>
+                                        <input
+                                            value={priceMin}
+                                            onChange={(e) => setPriceMin(Number(e.target.value || 0))}
+                                            type="number"
+                                        />
+                                    </div>
+                                    <div className="mp-pricebox">
+                                        <label>Max</label>
+                                        <input
+                                            value={priceMax}
+                                            onChange={(e) => setPriceMax(Number(e.target.value || 0))}
+                                            type="number"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            )}
 
-            {selectedListing && (
-                <ProductModal
-                    listing={selectedListing}
-                    onClose={() => setSelectedListing(null)}
-                />
-            )}
+                            <div className="mp-filterblock">
+                                <h4>Color</h4>
+
+                                {filterOptions.colorCount.size === 0 ? (
+                                    <p className="mp-hint">No colors found in data.</p>
+                                ) : (
+                                    [...filterOptions.colorCount.entries()]
+                                        .sort((a, b) => b[1] - a[1])
+                                        .slice(0, 10)
+                                        .map(([c, count]) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                className={`mp-optionrow ${selectedColors.has(c) ? "is-active" : ""}`}
+                                                onClick={() => toggleSetValue(setSelectedColors, c)}
+                                                title={c}
+                                            >
+                                                <span className="mp-optionrow__text">{c}</span>
+                                                <span className="mp-count">{count}</span>
+                                            </button>
+                                        ))
+                                )}
+                            </div>
+
+                            <div className="mp-filterblock">
+                                <h4>Material</h4>
+
+                                {filterOptions.materialCount.size === 0 ? (
+                                    <p className="mp-hint">No materials found in data.</p>
+                                ) : (
+                                    [...filterOptions.materialCount.entries()]
+                                        .sort((a, b) => b[1] - a[1])
+                                        .slice(0, 10)
+                                        .map(([m, count]) => (
+                                            <button
+                                                key={m}
+                                                type="button"
+                                                className={`mp-optionrow ${selectedMaterials.has(m) ? "is-active" : ""}`}
+                                                onClick={() => toggleSetValue(setSelectedMaterials, m)}
+                                                title={m}
+                                            >
+                                                <span className="mp-optionrow__text">{m}</span>
+                                                <span className="mp-count">{count}</span>
+                                            </button>
+                                        ))
+                                )}
+                            </div>
+
+                            <div className="mp-filterblock">
+                                <h4>Size</h4>
+
+                                {filterOptions.sizeCount.size === 0 ? (
+                                    <p className="mp-hint">No sizes found in data.</p>
+                                ) : (
+                                    [...filterOptions.sizeCount.entries()]
+                                        .sort((a, b) => b[1] - a[1])
+                                        .slice(0, 10)
+                                        .map(([s, count]) => (
+                                            <button
+                                                key={s}
+                                                type="button"
+                                                className={`mp-optionrow ${selectedSizes.has(s) ? "is-active" : ""}`}
+                                                onClick={() => toggleSetValue(setSelectedSizes, s)}
+                                                title={s}
+                                            >
+                                                <span className="mp-optionrow__text">{s}</span>
+                                                <span className="mp-count">{count}</span>
+                                            </button>
+                                        ))
+                                )}
+                            </div>
+                        </aside>
+                    )}
+
+                    <div className="mp-gridwrap">
+                        {filteredListings.length === 0 ? (
+                            <div className="empty-state">
+                                <h3>No items found</h3>
+                                <p>Try adjusting filters or searching with another keyword.</p>
+                            </div>
+                        ) : (
+                            <div className="mp-grid">
+                                {filteredListings.map((item) => (
+                                    <article className="mp-card" key={item.id}>
+                                        <button
+                                            type="button"
+                                            className="mp-card__media"
+                                            onClick={() => navigate(`/product/${item.id}`, { state: { listing: item } })}
+                                            aria-label={`Open details for ${item.title}`}
+                                        >
+                                            <img src={getPrimaryImage(item)} alt={item.title} loading="lazy" />
+                                        </button>
+
+                                        <div className="mp-card__info">
+                                            <div className="mp-card__type">
+                                                {(getType(item) || "LISTING").toUpperCase()}
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                className="mp-card__title"
+                                                onClick={() => navigate(`/product/${item.id}`, { state: { listing: item } })}
+                                            >
+                                                {item.title}
+                                            </button>
+
+                                            <div className="mp-card__price">{item.price} BDT</div>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </section>
+
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                onConfirm={modal.onConfirm}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                confirmText={modal.confirmText}
+            />
         </div>
     );
 };
