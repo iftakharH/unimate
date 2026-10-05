@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import '../styles/MyDeals.css';
 
 const MyDeals = () => {
@@ -9,35 +9,35 @@ const MyDeals = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (user) {
-            fetchDeals();
-        }
+        if (!user) return;
+
+        const fetchDeals = async () => {
+            try {
+                // Fetch deals where I am buyer OR seller
+                const { data, error } = await supabase
+                    .from('deals')
+                    .select(`
+                        *,
+                        listing:listings (
+                            title,
+                            image_url,
+                            price
+                        )
+                    `)
+                    .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                setDeals(data || []);
+            } catch (error) {
+                console.error('Error fetching deals:', error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDeals();
     }, [user]);
-
-    const fetchDeals = async () => {
-        try {
-            // Fetch deals where I am buyer OR seller
-            const { data, error } = await supabase
-                .from('deals')
-                .select(`
-                    *,
-                    listing:listings (
-                        title,
-                        image_url,
-                        price
-                    )
-                `)
-                .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setDeals(data || []);
-        } catch (error) {
-            console.error('Error fetching deals:', error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (loading) return <div className="loading">Loading your deals...</div>;
 

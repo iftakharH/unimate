@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { wishlistService } from "../services/wishlistService";
 import Modal from "../components/Modal";
 import "../styles/SavedItems.css";
@@ -54,7 +54,7 @@ const SavedItems = () => {
         try {
             const parsed = JSON.parse(image_url);
             if (Array.isArray(parsed)) return parsed[0] || null;
-        } catch (_) { }
+        } catch { /* not JSON, use the raw value */ }
         return image_url;
     };
 

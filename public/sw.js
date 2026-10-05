@@ -2,7 +2,7 @@ self.addEventListener("push", (event) => {
     let data = {};
     try {
         data = event.data ? event.data.json() : {};
-    } catch (e) { }
+    } catch { /* ignore malformed payload */ }
 
     const title = data.title || "New message";
     const body = data.body || "You received a new message.";

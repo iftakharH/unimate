@@ -1,46 +1,35 @@
 import { useState, useEffect } from 'react';
 
 const LISTING_DURATION_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ListingCountdown = ({ createdAt }) => {
-    const [timeLeft, setTimeLeft] = useState(null);
+    const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         if (!createdAt) return;
 
-        const calculateTimeLeft = () => {
-            const created = new Date(createdAt);
-            const expires = new Date(created.getTime() + LISTING_DURATION_DAYS * 24 * 60 * 60 * 1000);
-            const now = new Date();
-            const difference = expires - now;
-
-            if (difference <= 0) {
-                return 0;
-            }
-
-            return difference;
-        };
-
-        // Initial calculation
-        setTimeLeft(calculateTimeLeft());
-
+        const expires = new Date(createdAt).getTime() + LISTING_DURATION_DAYS * DAY_MS;
         const timer = setInterval(() => {
-            const t = calculateTimeLeft();
-            setTimeLeft(t);
-            if (t === 0) clearInterval(timer);
+            const t = Date.now();
+            setNow(t);
+            if (t >= expires) clearInterval(timer);
         }, 1000);
 
         return () => clearInterval(timer);
     }, [createdAt]);
 
-    if (timeLeft === null) return null; // Loading or invalid date
+    if (!createdAt) return null; // Loading or invalid date
+
+    const expires = new Date(createdAt).getTime() + LISTING_DURATION_DAYS * DAY_MS;
+    const timeLeft = Math.max(0, expires - now);
 
     if (timeLeft === 0) {
         return <div className="listing-countdown expired">Expired</div>;
     }
 
     // Format time
-    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const days = Math.floor(timeLeft / DAY_MS);
     const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
     const seconds = Math.floor((timeLeft / 1000) % 60);

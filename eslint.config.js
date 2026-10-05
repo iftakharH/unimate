@@ -26,4 +26,11 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // Service worker runs in its own global scope (clients, caches, ...)
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
 ])

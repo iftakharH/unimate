@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import "../styles/CreateListing.css";
@@ -191,7 +191,7 @@ const EditListing = () => {
         setTouched((p) => ({ ...p, [`attr_${key}`]: true }));
     };
 
-    const validateAndAddFiles = (fileList) => {
+    const validateAndAddFiles = useCallback((fileList) => {
         const incoming = Array.from(fileList || []);
         if (!incoming.length) return;
 
@@ -224,14 +224,14 @@ const EditListing = () => {
 
         setNewFiles(nextFiles);
         setNewPreviews(nextPrev);
-    };
+    }, [images, newFiles, newPreviews]);
 
     const removeNewAt = (idx) => {
         setNewFiles((p) => p.filter((_, i) => i !== idx));
         setNewPreviews((p) => p.filter((_, i) => i !== idx));
     };
 
-    const validateAndAddVideos = (fileList) => {
+    const validateAndAddVideos = useCallback((fileList) => {
         const incoming = Array.from(fileList || []);
         if (!incoming.length) return;
 
@@ -257,13 +257,13 @@ const EditListing = () => {
             nextFiles.push(f);
         }
         setNewVideoFiles(nextFiles);
-    };
+    }, [videos, newVideoFiles]);
 
     const removeNewVideoAt = (idx) => {
         setNewVideoFiles((p) => p.filter((_, i) => i !== idx));
     };
 
-    const processFiles = (files) => {
+    const processFiles = useCallback((files) => {
         const incoming = Array.from(files || []);
         const img = [];
         const vid = [];
@@ -273,7 +273,7 @@ const EditListing = () => {
         });
         if (img.length) validateAndAddFiles(img);
         if (vid.length) validateAndAddVideos(vid);
-    };
+    }, [validateAndAddFiles, validateAndAddVideos]);
 
     // ✅ Handle Paste
     useEffect(() => {
@@ -296,7 +296,7 @@ const EditListing = () => {
 
         window.addEventListener("paste", handlePaste);
         return () => window.removeEventListener("paste", handlePaste);
-    }, [images, newFiles, videos, newVideoFiles]);
+    }, [processFiles]);
 
     // ✅ Handle Drop
     const handleDrop = (e) => {

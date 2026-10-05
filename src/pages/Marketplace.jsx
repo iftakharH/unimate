@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
-import { chatService } from "../services/chatService";
+import { useAuth } from "../context/useAuth";
 import { wishlistService } from "../services/wishlistService";
 import Modal from "../components/Modal";
 import "../styles/Marketplace.css";
@@ -38,7 +37,6 @@ const Marketplace = () => {
 
     useEffect(() => {
         fetchListings();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fetch saved listing IDs when user is available
@@ -94,46 +92,6 @@ const Marketplace = () => {
             setError("Could not load listings. Please try again.");
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleMessage = async (listing) => {
-        if (!user) {
-            navigate("/login");
-            return;
-        }
-
-        if (user.id === listing.seller_id) {
-            setModal({
-                isOpen: true,
-                title: "Information",
-                message: "You cannot chat with yourself!",
-                type: "info",
-                confirmText: "Close",
-                onConfirm: () => setModal({ ...modal, isOpen: false }),
-                onClose: () => setModal({ ...modal, isOpen: false })
-            });
-            return;
-        }
-
-        try {
-            const chatId = await chatService.getOrCreateChat(
-                listing.id,
-                listing.seller_id,
-                user.id
-            );
-            navigate(`/chat/${chatId}`);
-        } catch (error) {
-            console.error("Error starting chat:", error);
-            setModal({
-                isOpen: true,
-                title: "Error",
-                message: "Could not start chat. Please try again later.",
-                type: "danger",
-                confirmText: "Close",
-                onConfirm: () => setModal({ ...modal, isOpen: false }),
-                onClose: () => setModal({ ...modal, isOpen: false })
-            });
         }
     };
 
@@ -240,7 +198,6 @@ const Marketplace = () => {
     useEffect(() => {
         setPriceMin(filterOptions.priceMin);
         setPriceMax(filterOptions.priceMax);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterOptions.priceMin, filterOptions.priceMax]);
 
     useEffect(() => {

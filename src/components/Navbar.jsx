@@ -1,14 +1,14 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, Menu, X } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/useAuth";
+import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { notificationService } from "../services/notificationService";
 import "../styles/Navbar.css";
 import logo from "../assets/UnimateLogo1.png";
 
 const Navbar = () => {
-    const { user, signOut } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -17,8 +17,8 @@ const Navbar = () => {
 
     const [unreadMsgs, setUnreadMsgs] = useState(0);
 
-    // Track previous unread count to detect new messages
-    const prevUnreadRef = useRef(0);
+    // Badge value: hidden while logged out
+    const unreadCount = user ? unreadMsgs : 0;
 
     useEffect(() => {
         const onScroll = () => {
@@ -34,47 +34,6 @@ const Navbar = () => {
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
-
-    const fetchUnread = async (uid) => {
-        try {
-            // get all chats where user is buyer or seller
-            const { data: chats, error: chatErr } = await supabase
-                .from("chats")
-                .select("id")
-                .or(`buyer_id.eq.${uid},seller_id.eq.${uid}`);
-
-            if (chatErr) {
-                console.error("Unread count: chats error:", chatErr);
-                setUnreadMsgs(0);
-                return;
-            }
-
-            const chatIds = (chats || []).map((c) => c.id);
-            if (chatIds.length === 0) {
-                setUnreadMsgs(0);
-                return;
-            }
-
-            // count unread messages not sent by me
-            const { count, error: msgErr } = await supabase
-                .from("messages")
-                .select("id", { count: "exact", head: true })
-                .in("chat_id", chatIds)
-                .neq("sender_id", uid)
-                .eq("is_read", false);
-
-            if (msgErr) {
-                console.error("Unread count: messages error:", msgErr);
-                setUnreadMsgs(0);
-                return;
-            }
-
-            setUnreadMsgs(count || 0);
-        } catch (e) {
-            console.error("Unread count unexpected:", e);
-            setUnreadMsgs(0);
-        }
-    };
 
     // Request browser notification permission once when user is logged in
     useEffect(() => {
@@ -99,10 +58,47 @@ const Navbar = () => {
 
     // realtime unread updater + browser push notifications
     useEffect(() => {
-        if (!user?.id) {
-            setUnreadMsgs(0);
-            return;
-        }
+        if (!user?.id) return;
+
+        const fetchUnread = async (uid) => {
+            try {
+                // get all chats where user is buyer or seller
+                const { data: chats, error: chatErr } = await supabase
+                    .from("chats")
+                    .select("id")
+                    .or(`buyer_id.eq.${uid},seller_id.eq.${uid}`);
+
+                if (chatErr) {
+                    console.error("Unread count: chats error:", chatErr);
+                    setUnreadMsgs(0);
+                    return;
+                }
+
+                const chatIds = (chats || []).map((c) => c.id);
+                if (chatIds.length === 0) {
+                    setUnreadMsgs(0);
+                    return;
+                }
+
+                // count unread messages not sent by me
+                const { count, error: msgErr } = await supabase
+                    .from("messages")
+                    .select("id", { count: "exact", head: true })
+                    .in("chat_id", chatIds)
+                    .neq("sender_id", uid)
+                    .eq("is_read", false);
+
+                if (msgErr) {
+                    console.error("Unread count: messages error:", msgErr);
+                    setUnreadMsgs(0);
+                    return;
+                }
+
+                setUnreadMsgs(count || 0);
+            } catch (e) {
+                console.error("Unread count unexpected:", e);
+            }
+        };
 
         fetchUnread(user.id);
 
@@ -147,12 +143,6 @@ const Navbar = () => {
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
-
-    const handleLogout = async () => {
-        await signOut();
-        setMenuOpen(false);
-        navigate("/");
-    };
 
     const closeMenu = () => setMenuOpen(false);
 
@@ -209,8 +199,8 @@ const Navbar = () => {
                                     />
                                 </svg>
 
-                                {unreadMsgs > 0 && (
-                                    <span className="pro-btn-badge">{unreadMsgs}</span>
+                                {unreadCount > 0 && (
+                                    <span className="pro-btn-badge">{unreadCount}</span>
                                 )}
                             </button>
 

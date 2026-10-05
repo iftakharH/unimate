@@ -1,8 +1,6 @@
 import "../styles/Footer.css";
-import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faMagnifyingGlass,
     faGlobe
 } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -10,27 +8,10 @@ import {
     faInstagram,
     faPinterestP,
     faXTwitter,
-    faYoutube,
-    faApple,
-    faGooglePlay
+    faYoutube
 } from "@fortawesome/free-brands-svg-icons";
 
 const Footer = () => {
-    const [searchTerm, setSearchTerm] = useState("");
-
-    const handleSearch = () => {
-        if (!searchTerm.trim()) return;
-
-        console.log("Searching for:", searchTerm);
-
-        // Later you can connect it like this:
-        // navigate(`/marketplace?search=${encodeURIComponent(searchTerm)}`);
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter") handleSearch();
-    };
-
     return (
         <footer className="site-footer">
             <div className="footer-inner">

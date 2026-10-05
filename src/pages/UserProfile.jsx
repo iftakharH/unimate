@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import "../styles/UserProfile.css";
 
 const UserProfile = () => {
@@ -58,7 +58,7 @@ const UserProfile = () => {
                 if (!error && data) {
                     publicProfile = data;
                 }
-            } catch (err) {
+            } catch {
                 // Ignore error (tables might not exist)
             }
 

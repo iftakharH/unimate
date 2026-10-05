@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import Modal from '../components/Modal';
 import '../styles/AdminPanel.css';
 

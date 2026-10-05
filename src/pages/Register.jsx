@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import '../styles/Auth.css';
 
 const Register = () => {

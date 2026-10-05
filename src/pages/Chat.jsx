@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { chatService } from "../services/chatService";
 import Modal from "../components/Modal";
 import "../styles/Chat.css";
@@ -65,22 +65,22 @@ const Chat = () => {
         scrollToBottom();
     }, [messages]);
 
-    // ✅ Mark as read (also helps navbar badge drop instantly)
-    const markChatAsRead = async () => {
-        if (!user || !chatId) return;
-
-        await supabase
-            .from("messages")
-            .update({ is_read: true })
-            .eq("chat_id", chatId)
-            .neq("sender_id", user.id)
-            .eq("is_read", false);
-    };
-
     const [profiles, setProfiles] = useState({}); // map of userId -> profile data
 
     useEffect(() => {
         if (!user) return;
+
+        // ✅ Mark as read (also helps navbar badge drop instantly)
+        const markChatAsRead = async () => {
+            if (!user || !chatId) return;
+
+            await supabase
+                .from("messages")
+                .update({ is_read: true })
+                .eq("chat_id", chatId)
+                .neq("sender_id", user.id)
+                .eq("is_read", false);
+        };
 
         const fetchChatInfo = async () => {
             const { data: chat, error } = await supabase

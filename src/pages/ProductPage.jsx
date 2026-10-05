@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { chatService } from "../services/chatService";
 import { listingService } from "../services/listingService";
 import { reviewService } from "../services/reviewService";

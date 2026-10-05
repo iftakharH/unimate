@@ -1,23 +1,21 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+import { useAuth } from "../context/useAuth";
 import { enablePushNotifications } from "../utils/pushClient";
 import Modal from "./Modal";
 
 const PushInitializer = () => {
     const { user } = useAuth();
-    const [showPrompt, setShowPrompt] = useState(false);
+    const [dismissed, setDismissed] = useState(false);
 
-    useEffect(() => {
-        if (user && !localStorage.getItem("push_prompt_shown")) {
-            // Check if already granted or denied
-            if (Notification.permission === "default") {
-                setShowPrompt(true);
-            }
-        }
-    }, [user]);
+    const showPrompt =
+        !dismissed &&
+        !!user &&
+        !localStorage.getItem("push_prompt_shown") &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "default";
 
     const handleConfirm = async () => {
-        setShowPrompt(false);
+        setDismissed(true);
         localStorage.setItem("push_prompt_shown", "true");
         try {
             await enablePushNotifications();
@@ -27,7 +25,7 @@ const PushInitializer = () => {
     };
 
     const handleClose = () => {
-        setShowPrompt(false);
+        setDismissed(true);
         localStorage.setItem("push_prompt_shown", "true");
     };
 
