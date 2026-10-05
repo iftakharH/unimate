@@ -6,6 +6,7 @@ import { listingService } from "../services/listingService";
 import { reviewService } from "../services/reviewService";
 import { wishlistService } from "../services/wishlistService";
 import Modal from "../components/Modal";
+import { sanitizeHtml } from "../utils/sanitizeHtml";
 import "../styles/ProductPage.css";
 
 const PLACEHOLDER_IMG =
@@ -516,7 +517,7 @@ const ProductPage = () => {
                         <div className="pp-descbox">
                             <h3>Description</h3>
                             {listing.description ? (
-                                <div className="pp-desc" dangerouslySetInnerHTML={{ __html: listing.description }} />
+                                <div className="pp-desc" dangerouslySetInnerHTML={{ __html: sanitizeHtml(listing.description) }} />
                             ) : (
                                 <p className="pp-desc">No description provided.</p>
                             )}
