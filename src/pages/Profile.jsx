@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { supabase } from "../supabaseClient";
 import Modal from "../components/Modal";
 import "../styles/Profile.css";
@@ -8,10 +8,6 @@ import "../styles/Profile.css";
 // ✅ Professional icons (Font Awesome - solid)
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faStore,
-    faHandshake,
-    faEnvelope,
-    faHeart,
     faPlus,
     faUserPen,
     faShieldHalved,
@@ -29,6 +25,8 @@ const Profile = () => {
     const [bioText, setBioText] = useState("");
 
     const [unreadMsgs, setUnreadMsgs] = useState(0);
+    const [listingCount, setListingCount] = useState(0);
+    const [purchaseCount, setPurchaseCount] = useState(0);
     const [salesCount, setSalesCount] = useState(0);
 
     // Modal state
@@ -331,7 +329,7 @@ const Profile = () => {
                 </section>
 
                 {/* Stats */}
-                {/* <section className="pro-stats">
+                <section className="pro-stats">
                     <button className="pro-stat" onClick={() => navigate("/messages")}>
                         <span className="pro-stat__label">Unread</span>
                         <span className="pro-stat__value">{loading ? "—" : unreadMsgs}</span>
@@ -355,7 +353,7 @@ const Profile = () => {
                         <span className="pro-stat__value">{loading ? "—" : salesCount}</span>
                         <span className="pro-stat__hint">Completed</span>
                     </button>
-                </section> */}
+                </section>
 
                 {/* Main Grid */}
                 <div className="pro-grid">
