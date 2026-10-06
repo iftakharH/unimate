@@ -16,6 +16,8 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+    const [cooldown, setCooldown] = useState(0);
 
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -27,6 +29,13 @@ const Register = () => {
         }
     }, [user, navigate]);
 
+    // Countdown when Supabase asks us to wait before retrying
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [cooldown]);
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -36,8 +45,11 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (cooldown > 0) return;
+
         setLoading(true);
         setErrorMsg('');
+        setSuccessMsg('');
 
         // Validation
         if (formData.password !== formData.confirmPassword) {
@@ -53,7 +65,7 @@ const Register = () => {
         }
 
         try {
-            const { error } = await supabase.auth.signUp({
+            const { data, error } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
                 options: {
@@ -65,9 +77,24 @@ const Register = () => {
 
             if (error) throw error;
 
-            // Auto login usually follows signup, handled by auth state change
+            if (!data.session) {
+                // The project still requires email confirmation: no session yet.
+                setSuccessMsg(`Account created! We sent a confirmation link to ${formData.email}. Check your inbox (and spam folder) to activate it.`);
+            }
+            // With confirmation disabled the auth state change logs the user
+            // in and the effect above redirects to the marketplace.
         } catch (error) {
-            setErrorMsg(error.message);
+            const wait = error.message?.match(/after (\d+) seconds?/i);
+            if (wait) {
+                const seconds = Number(wait[1]) || 60;
+                setCooldown(seconds);
+                setErrorMsg(`Too many signup attempts. Please wait ${seconds} seconds, then try again.`);
+            } else if (/rate limit/i.test(error.message || '')) {
+                setCooldown(60);
+                setErrorMsg('Too many signup emails were requested. Please wait a few minutes, then try again.');
+            } else {
+                setErrorMsg(error.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -97,6 +124,7 @@ const Register = () => {
                 <p className="auth-subtitle">Connect with your university community</p>
 
                 {errorMsg && <div className="auth-error">{errorMsg}</div>}
+                {successMsg && <div className="auth-success">{successMsg}</div>}
 
                 <form onSubmit={handleSubmit} className="auth-form">
                     <div className="form-group">
@@ -169,8 +197,12 @@ const Register = () => {
                         </div>
                     </div>
 
-                    <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Create Account'}
+                    <button type="submit" className="btn btn-primary btn-full" disabled={loading || cooldown > 0}>
+                        {loading
+                            ? 'Creating Account...'
+                            : cooldown > 0
+                                ? `Try again in ${cooldown}s`
+                                : 'Create Account'}
                     </button>
                 </form>
 
