@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import '../styles/Landing.css';
-import heroGif from "../assets/hero101.gif";
+import heroAnimation from "../assets/hero101.webp";
 const Landing = () => {
 
     const items = [
@@ -55,7 +55,7 @@ const Landing = () => {
                     {/* Right Media */}
                     <div className="hero-media">
                         <img
-                            src={heroGif}
+                            src={heroAnimation}
                             alt="Unimate demo"
                             className="hero-gif"
                         />
